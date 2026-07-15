@@ -3,7 +3,7 @@
 # Update flow: commit your changes, then run `makepkg -si` in this directory.
 
 pkgname=hyperfocus-dash-git
-pkgver=r4.0000000
+pkgver=r4.486c63b
 pkgrel=1
 pkgdesc="Local-first ADHD dashboard (Rose Pine, Tauri)"
 arch=('x86_64')
