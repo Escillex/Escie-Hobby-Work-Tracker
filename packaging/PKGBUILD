@@ -1,0 +1,47 @@
+# Maintainer: Escillex
+# Local -git package built from this repo (committed changes only).
+# Update flow: commit your changes, then run `makepkg -si` in this directory.
+
+pkgname=hyperfocus-dash-git
+pkgver=r4.0000000
+pkgrel=1
+pkgdesc="Local-first ADHD dashboard (Rose Pine, Tauri)"
+arch=('x86_64')
+license=('custom')
+depends=('webkit2gtk-4.1' 'gtk3' 'hicolor-icon-theme')
+makedepends=('git' 'rust' 'nodejs' 'pnpm')
+provides=('hyperfocus-dash')
+conflicts=('hyperfocus-dash')
+options=('!lto')
+# $PWD is the directory containing this PKGBUILD; the repo root is one up.
+source=("hyperfocus-dash::git+file://$PWD/..")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd hyperfocus-dash
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd hyperfocus-dash
+  pnpm install --frozen-lockfile
+}
+
+build() {
+  cd hyperfocus-dash
+  pnpm tauri build --no-bundle
+}
+
+package() {
+  cd hyperfocus-dash
+  install -Dm755 src-tauri/target/release/hyperfocus-dash \
+    "$pkgdir/usr/bin/hyperfocus-dash"
+  install -Dm644 packaging/hyperfocus-dash.desktop \
+    "$pkgdir/usr/share/applications/hyperfocus-dash.desktop"
+  install -Dm644 src-tauri/icons/32x32.png \
+    "$pkgdir/usr/share/icons/hicolor/32x32/apps/hyperfocus-dash.png"
+  install -Dm644 src-tauri/icons/128x128.png \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/hyperfocus-dash.png"
+  install -Dm644 src-tauri/icons/icon.png \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/hyperfocus-dash.png"
+}
