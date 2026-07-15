@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hyperfocus Dash
+Comment=Local-first ADHD dashboard
+Exec=hyperfocus-dash
+Icon=hyperfocus-dash
+Terminal=false
+Categories=Utility;
+StartupWMClass=hyperfocus-dash
