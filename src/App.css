@@ -1,0 +1,35 @@
+.dash-grid {
+  height: 100%;
+  display: grid;
+  grid-template-areas:
+    "launcher launcher launcher"
+    "sidebar  main     rail"
+    "stats    stats    stats";
+  grid-template-columns: 280px 1fr 300px;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.dash-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.dash-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .dash-grid {
+    grid-template-columns: 240px 1fr 260px;
+  }
+}

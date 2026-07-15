@@ -1,0 +1,10 @@
+.stats-bar {
+  grid-area: stats;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  color: var(--rp-subtle);
+}

@@ -1,0 +1,90 @@
+.dopamine {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.add-dopamine {
+  margin-left: auto;
+}
+
+.dopamine-tiers {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.dopamine-tier {
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--rp-subtle);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.dopamine-tier:hover {
+  background: var(--glass-overlay);
+}
+
+.dopamine-tier.active {
+  background: color-mix(in srgb, var(--rp-rose) 18%, var(--rp-overlay));
+  border-color: color-mix(in srgb, var(--rp-rose) 40%, transparent);
+  color: var(--rp-text);
+}
+
+.surprise {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.dopamine-pick {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rp-rose) 14%, transparent);
+  color: var(--rp-rose);
+  font-weight: 600;
+}
+
+.dopamine-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.dopamine-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+}
+
+.dopamine-list li:hover {
+  background: var(--glass-overlay);
+}
+
+.dopamine-list li .btn {
+  opacity: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.7rem;
+}
+
+.dopamine-list li:hover .btn {
+  opacity: 1;
+}
+
+.dopamine-empty {
+  color: var(--rp-muted);
+  font-size: 0.82rem;
+}

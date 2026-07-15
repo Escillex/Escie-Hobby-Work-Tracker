@@ -1,0 +1,36 @@
+.hf-timer {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hf-display {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--rp-muted);
+  text-align: center;
+  transition: color 0.3s var(--ease);
+}
+
+.hf-display.running {
+  color: var(--rp-gold);
+  text-shadow: 0 0 24px color-mix(in srgb, var(--rp-gold) 35%, transparent);
+}
+
+.hf-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.hf-nudge {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--rp-foam);
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rp-foam) 10%, transparent);
+  animation: fade-up 0.3s var(--ease);
+}

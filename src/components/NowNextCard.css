@@ -1,0 +1,61 @@
+.now-next {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 0.75rem;
+}
+
+.now-card,
+.next-card {
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.now-card {
+  border-color: color-mix(in srgb, var(--rp-gold) 35%, transparent);
+}
+
+.now-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rp-gold);
+  box-shadow: 0 0 10px var(--rp-gold);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.now-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.next-text {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--rp-subtle);
+}
+
+.now-empty {
+  margin: 0;
+  color: var(--rp-muted);
+  font-size: 0.9rem;
+}
+
+.now-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.pull-next {
+  justify-content: flex-start;
+  text-align: left;
+  color: var(--rp-foam);
+}

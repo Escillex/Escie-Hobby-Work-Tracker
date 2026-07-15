@@ -1,0 +1,33 @@
+/* Rosé Pine (main) — https://rosepinetheme.com/palette */
+:root {
+  --rp-base: #191724;
+  --rp-surface: #1f1d2e;
+  --rp-overlay: #26233a;
+  --rp-muted: #6e6a86;
+  --rp-subtle: #908caa;
+  --rp-text: #e0def4;
+  --rp-love: #eb6f92;
+  --rp-gold: #f6c177;
+  --rp-rose: #ebbcba;
+  --rp-pine: #31748f;
+  --rp-foam: #9ccfd8;
+  --rp-iris: #c4a7e7;
+  --rp-highlight-low: #21202e;
+  --rp-highlight-med: #403d52;
+  --rp-highlight-high: #524f67;
+
+  /* Derived glass surfaces */
+  --glass-surface: color-mix(in srgb, var(--rp-surface) 72%, transparent);
+  --glass-overlay: color-mix(in srgb, var(--rp-overlay) 65%, transparent);
+  --glass-border: color-mix(in srgb, var(--rp-highlight-med) 60%, transparent);
+  --glass-blur: blur(14px);
+
+  --shadow-soft: 0 4px 24px rgb(0 0 0 / 0.35);
+  --shadow-lift: 0 8px 32px rgb(0 0 0 / 0.45);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --ease: cubic-bezier(0.25, 0.8, 0.35, 1);
+}
