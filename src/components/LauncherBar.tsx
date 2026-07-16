@@ -8,7 +8,15 @@ import { ColorPicker } from "./ColorPicker";
 import { IC } from "../lib/icons";
 import "./LauncherBar.css";
 
-export function LauncherBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function LauncherBar({
+  view,
+  onView,
+  onOpenSettings,
+}: {
+  view: "dashboard" | "tasks";
+  onView: (v: "dashboard" | "tasks") => void;
+  onOpenSettings: () => void;
+}) {
   const { data, dispatch } = useApp();
   const [editing, setEditing] = useState<Launcher | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +35,20 @@ export function LauncherBar({ onOpenSettings }: { onOpenSettings: () => void }) 
       <h1 className="app-title">
         hyper<span>focus</span>
       </h1>
+      <nav className="view-nav">
+        <button
+          className={`view-tab ${view === "dashboard" ? "active" : ""}`}
+          onClick={() => onView("dashboard")}
+        >
+          {IC.bolt} Dashboard
+        </button>
+        <button
+          className={`view-tab ${view === "tasks" ? "active" : ""}`}
+          onClick={() => onView("tasks")}
+        >
+          {IC.check} Tasks
+        </button>
+      </nav>
       <div className="launcher-buttons">
         {data.launchers.map((l) => (
           <button

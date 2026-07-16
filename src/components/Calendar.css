@@ -1,0 +1,84 @@
+.cal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--rp-text);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-dow {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--rp-muted);
+  padding-bottom: 2px;
+}
+
+.cal-cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rp-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.cal-cell.empty {
+  cursor: default;
+}
+
+.cal-cell:not(.empty):hover {
+  background: var(--glass-overlay);
+}
+
+.cal-cell.today {
+  color: var(--rp-gold);
+  font-weight: 700;
+}
+
+.cal-cell.selected {
+  background: color-mix(in srgb, var(--rp-iris) 22%, var(--rp-overlay));
+  border-color: color-mix(in srgb, var(--rp-iris) 45%, transparent);
+}
+
+.cal-dot {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rp-foam);
+}
+
+.cal-dot.pending {
+  background: var(--rp-foam);
+}
+.cal-dot.overdue {
+  background: var(--rp-love);
+}
+.cal-dot.done {
+  background: var(--rp-muted);
+}

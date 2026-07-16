@@ -1,0 +1,172 @@
+.tasks-view {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) 1fr;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.tasks-cal-col {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-self: start;
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--rp-subtle);
+}
+
+.cal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cal-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.cal-legend .dot.foam {
+  background: var(--rp-foam);
+}
+.cal-legend .dot.love {
+  background: var(--rp-love);
+}
+.cal-legend .dot.muted {
+  background: var(--rp-muted);
+}
+
+.tasks-day-col {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 0;
+}
+
+.tasks-day-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.tasks-day-header h2 {
+  font-size: 1.35rem;
+}
+
+.tasks-day-count {
+  color: var(--rp-subtle);
+  font-size: 0.85rem;
+}
+
+.tasks-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tasks-add-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tasks-add-row .input {
+  width: auto;
+}
+
+.tasks-add-row .input[type="time"] {
+  flex: 0 0 auto;
+}
+
+.tasks-lists {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tasks-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tasks-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rp-subtle);
+}
+
+.tasks-empty {
+  margin: 0;
+  color: var(--rp-muted);
+  font-size: 0.88rem;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  background: var(--glass-overlay);
+  border: 1px solid transparent;
+  transition: border-color 0.18s var(--ease);
+}
+
+.task-row:hover {
+  border-color: var(--glass-border);
+}
+
+.task-row.overdue {
+  border-left: 3px solid var(--rp-love);
+}
+
+.task-row.done .task-text {
+  color: var(--rp-muted);
+  text-decoration: line-through;
+}
+
+.task-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.task-label {
+  font-size: 0.78rem;
+  color: var(--rp-gold);
+  white-space: nowrap;
+}
+
+.task-row.overdue .task-label {
+  color: var(--rp-love);
+}
+
+.task-row .danger {
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+
+.task-row:hover .danger {
+  opacity: 1;
+}
+
+@media (max-width: 820px) {
+  .tasks-view {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}

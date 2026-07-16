@@ -18,6 +18,37 @@
   color: var(--rp-iris);
 }
 
+.view-nav {
+  display: flex;
+  gap: 0.2rem;
+  padding: 2px;
+  background: var(--glass-overlay);
+  border-radius: var(--radius-sm);
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--rp-subtle);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.view-tab:hover {
+  color: var(--rp-text);
+}
+
+.view-tab.active {
+  background: color-mix(in srgb, var(--rp-iris) 20%, var(--rp-overlay));
+  color: var(--rp-text);
+}
+
 .launcher-buttons {
   display: flex;
   align-items: center;
