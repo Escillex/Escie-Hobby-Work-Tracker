@@ -51,6 +51,12 @@ export const MEDIA_STATUSES: MediaStatus[] = [
   "REPEATING",
 ];
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface MediaEntry {
   id: string;
   categoryId: string;
@@ -65,6 +71,8 @@ export interface MediaEntry {
   anilistMediaListId?: number;
   steamAppId?: number;
   launchCommand?: string;
+  notes?: string;
+  checklist?: ChecklistItem[];
 }
 
 export type DopamineTier = 5 | 15 | 30;

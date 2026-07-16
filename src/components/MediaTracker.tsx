@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
+import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -86,6 +86,8 @@ function CategoryView({
   const token = data.settings.anilistToken;
   const [syncing, setSyncing] = useState(false);
   const [addingManual, setAddingManual] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detailEntry = entries.find((e) => e.id === detailId) ?? null;
 
   const sync = async () => {
     if (!token || !data.settings.anilistUserId) {
@@ -212,6 +214,7 @@ function CategoryView({
             onBump={() => bump(e)}
             onLaunch={() => launch(e)}
             onStatus={(s) => setStatus(e, s)}
+            onDetails={() => setDetailId(e.id)}
             onDelete={() => dispatch({ type: "media/delete", id: e.id })}
           />
         ))}
@@ -228,7 +231,105 @@ function CategoryView({
           }}
         />
       )}
+
+      {detailEntry && (
+        <EntryDetailModal
+          entry={detailEntry}
+          onClose={() => setDetailId(null)}
+          onUpdate={(entry) => dispatch({ type: "media/update", entry })}
+        />
+      )}
     </div>
+  );
+}
+
+function EntryDetailModal({
+  entry,
+  onClose,
+  onUpdate,
+}: {
+  entry: MediaEntry;
+  onClose: () => void;
+  onUpdate: (e: MediaEntry) => void;
+}) {
+  const [newItem, setNewItem] = useState("");
+  const checklist = entry.checklist ?? [];
+
+  const addItem = () => {
+    const text = newItem.trim();
+    if (!text) return;
+    const item: ChecklistItem = { id: uid(), text, done: false };
+    onUpdate({ ...entry, checklist: [...checklist, item] });
+    setNewItem("");
+  };
+
+  const toggle = (id: string) =>
+    onUpdate({
+      ...entry,
+      checklist: checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
+    });
+
+  const remove = (id: string) =>
+    onUpdate({ ...entry, checklist: checklist.filter((c) => c.id !== id) });
+
+  const openCount = checklist.filter((c) => !c.done).length;
+
+  return (
+    <Modal title={entry.title} onClose={onClose}>
+      <div className="field">
+        <label>Notes</label>
+        <textarea
+          className="input detail-notes"
+          rows={5}
+          placeholder="Anything worth remembering — where you left off, a boss strategy, a link…"
+          defaultValue={entry.notes ?? ""}
+          onBlur={(e) => {
+            const notes = e.target.value.trim();
+            if (notes !== (entry.notes ?? "")) onUpdate({ ...entry, notes: notes || undefined });
+          }}
+        />
+      </div>
+      <div className="field">
+        <label>
+          Checklist{checklist.length > 0 ? ` (${openCount} left)` : ""}
+        </label>
+        <div className="detail-checklist">
+          {checklist.map((c) => (
+            <div key={c.id} className={`detail-check ${c.done ? "done" : ""}`}>
+              <button
+                className={`check-box ${c.done ? "checked" : ""}`}
+                title={c.done ? "Mark undone" : "Mark done"}
+                onClick={() => toggle(c.id)}
+              >
+                {c.done ? IC.check : null}
+              </button>
+              <span className="detail-check-text">{c.text}</span>
+              <button
+                className="btn ghost icon danger"
+                title="Remove"
+                onClick={() => remove(c.id)}
+              >
+                {IC.close}
+              </button>
+            </div>
+          ))}
+          <div className="detail-check-add">
+            <input
+              className="input"
+              placeholder="Add a task… (Enter)"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addItem();
+              }}
+            />
+            <button className="btn" disabled={!newItem.trim()} onClick={addItem}>
+              {IC.plus}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -238,6 +339,7 @@ function MediaCard({
   onBump,
   onLaunch,
   onStatus,
+  onDetails,
   onDelete,
 }: {
   entry: MediaEntry;
@@ -245,8 +347,13 @@ function MediaCard({
   onBump: () => void;
   onLaunch: () => void;
   onStatus: (s: MediaStatus) => void;
+  onDetails: () => void;
   onDelete: () => void;
 }) {
+  const openTasks = entry.checklist?.filter((c) => !c.done).length ?? 0;
+  const hasNotes = Boolean(entry.notes?.trim());
+  const annotated = hasNotes || (entry.checklist?.length ?? 0) > 0;
+
   return (
     <div className={`media-card status-${entry.status.toLowerCase()}`}>
       {entry.coverUrl ? (
@@ -294,6 +401,14 @@ function MediaCard({
               </option>
             ))}
           </select>
+          <button
+            className={`btn ghost icon detail-btn ${annotated ? "annotated" : ""}`}
+            title="Notes & checklist"
+            onClick={onDetails}
+          >
+            {IC.note}
+            {openTasks > 0 && <span className="detail-badge">{openTasks}</span>}
+          </button>
           <button className="btn ghost icon danger" title="Remove" onClick={onDelete}>
             {IC.close}
           </button>

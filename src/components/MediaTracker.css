@@ -202,3 +202,109 @@
   font-size: 0.78rem;
   width: auto;
 }
+
+/* ---------- Per-entry notes & checklist ---------- */
+
+.detail-btn {
+  position: relative;
+  color: var(--rp-subtle);
+}
+
+.detail-btn.annotated {
+  color: var(--rp-foam);
+}
+
+.detail-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--rp-love);
+  color: var(--rp-base);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.detail-notes {
+  resize: vertical;
+  min-height: 5rem;
+  font-family: inherit;
+}
+
+.detail-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.detail-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--glass-overlay);
+}
+
+.check-box {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid var(--rp-highlight-high);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--rp-base);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.check-box:hover {
+  border-color: var(--rp-foam);
+}
+
+.check-box.checked {
+  background: var(--rp-foam);
+  border-color: var(--rp-foam);
+}
+
+.detail-check .btn.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.detail-check-text {
+  flex: 1;
+  word-break: break-word;
+  font-size: 0.9rem;
+}
+
+.detail-check.done .detail-check-text {
+  color: var(--rp-muted);
+  text-decoration: line-through;
+}
+
+.detail-check .danger {
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+
+.detail-check:hover .danger {
+  opacity: 1;
+}
+
+.detail-check-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
