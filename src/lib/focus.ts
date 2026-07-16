@@ -45,11 +45,13 @@ export const sameRef = (a?: FocusRef, b?: FocusRef) =>
 export function useFocusActions() {
   const { data, dispatch } = useApp();
 
+  const focus = data.focus ?? {};
+
   /** Make `ref` the NOW focus; any existing NOW slides down to NEXT. */
   const focusNow = (ref: FocusRef) => {
-    if (sameRef(data.focus.now, ref)) return;
-    if (data.focus.now && !sameRef(data.focus.now, ref)) {
-      dispatch({ type: "focus/set", slot: "next", ref: data.focus.now });
+    if (sameRef(focus.now, ref)) return;
+    if (focus.now && !sameRef(focus.now, ref)) {
+      dispatch({ type: "focus/set", slot: "next", ref: focus.now });
     }
     dispatch({ type: "focus/set", slot: "now", ref });
   };
@@ -58,7 +60,7 @@ export function useFocusActions() {
     dispatch({ type: "focus/set", slot: "next", ref });
 
   const isFocused = (ref: FocusRef) =>
-    sameRef(data.focus.now, ref) || sameRef(data.focus.next, ref);
+    sameRef(focus.now, ref) || sameRef(focus.next, ref);
 
   return { focusNow, focusNext, isFocused };
 }

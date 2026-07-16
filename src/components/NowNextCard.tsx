@@ -7,8 +7,8 @@ import "./NowNextCard.css";
 export function NowNextCard() {
   const { data, dispatch } = useApp();
 
-  const nowRef = data.focus.now;
-  const nextRef = data.focus.next;
+  const nowRef = data.focus?.now;
+  const nextRef = data.focus?.next;
   const now = nowRef ? resolveFocus(data, nowRef) : null;
   const next = nextRef ? resolveFocus(data, nextRef) : null;
 
