@@ -24,6 +24,21 @@
   justify-content: center;
 }
 
+.hf-alarm {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.hf-alarm input {
+  width: 5rem;
+}
+
+.hf-alarm-active {
+  width: 100%;
+  font-size: 0.82rem;
+  color: var(--rp-gold);
+}
+
 .hf-nudge {
   margin: 0;
   font-size: 0.82rem;

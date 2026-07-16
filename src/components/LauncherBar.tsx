@@ -5,6 +5,7 @@ import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { Modal } from "./Modal";
 import { ColorPicker } from "./ColorPicker";
+import { IC } from "../lib/icons";
 import "./LauncherBar.css";
 
 export function LauncherBar({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -43,12 +44,12 @@ export function LauncherBar({ onOpenSettings }: { onOpenSettings: () => void }) 
           </button>
         ))}
         <button className="btn ghost icon" onClick={() => setEditing("new")} title="Add launcher">
-          ＋
+          {IC.plus}
         </button>
       </div>
       {error && <span className="launcher-error">{error}</span>}
       <button className="btn ghost icon settings-btn" onClick={onOpenSettings} title="Settings">
-        ⚙
+        {IC.gear}
       </button>
 
       {editing && (

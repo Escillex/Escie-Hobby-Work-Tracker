@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchContributions, type ContributionData } from "../lib/github";
 import { loadGithubCache, saveGithubCache } from "../lib/store";
 import { useApp } from "../lib/state";
+import { IC } from "../lib/icons";
 import "./GitHubGraph.css";
 
 export function GitHubGraph() {
@@ -43,14 +44,14 @@ export function GitHubGraph() {
   return (
     <div className="gh-graph glass">
       <div className="panel-title">
-         {user || "github"}
+        {IC.github} {user || "github"}
         <button
           className="btn ghost icon gh-refresh"
           title="Refresh"
           onClick={refresh}
           disabled={loading}
         >
-          ⟳
+          {IC.refresh}
         </button>
       </div>
       {days.length > 0 ? (

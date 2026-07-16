@@ -26,7 +26,7 @@ export interface Impulse {
   status: ImpulseStatus;
 }
 
-export type CategorySource = "anilist-anime" | "anilist-manga" | "manual";
+export type CategorySource = "anilist-anime" | "anilist-manga" | "games" | "manual";
 
 export interface MediaCategory {
   id: string;
@@ -63,6 +63,8 @@ export interface MediaEntry {
   completedAt?: string;
   anilistId?: number;
   anilistMediaListId?: number;
+  steamAppId?: number;
+  launchCommand?: string;
 }
 
 export type DopamineTier = 5 | 15 | 30;
@@ -71,6 +73,17 @@ export interface DopamineItem {
   id: string;
   label: string;
   tier: DopamineTier;
+}
+
+export interface Todo {
+  id: string;
+  text: string;
+  createdAt: string; // ISO
+  dueAt?: string; // ISO, optional — undated todos are allowed
+  earlyMinutes: number; // heads-up notification this many minutes before dueAt
+  notifiedEarly?: boolean;
+  notifiedDue?: boolean;
+  done: boolean;
 }
 
 export interface Stats {
@@ -83,6 +96,12 @@ export interface Settings {
   anilistUserId?: number;
   anilistUserName?: string;
   githubUser: string;
+  rawgApiKey?: string;
+  steamApiKey?: string;
+  steamId?: string;
+  vaultPath?: string;
+  vaultInboxNote?: string;
+  fontFamily?: string;
 }
 
 export interface AppData {
@@ -93,6 +112,7 @@ export interface AppData {
     entries: MediaEntry[];
   };
   dopamine: DopamineItem[];
+  todos: Todo[];
   stats: Stats;
   settings: Settings;
 }
@@ -119,6 +139,7 @@ export function defaultData(): AppData {
         { id: "manga", name: "Manga", source: "anilist-manga" },
         { id: "movies", name: "Movies", source: "manual" },
         { id: "tv", name: "TV Shows", source: "manual" },
+        { id: "games", name: "Games", source: "games" },
       ],
       entries: [],
     },
@@ -129,6 +150,7 @@ export function defaultData(): AppData {
       { id: uid(), label: "Tidy the desk", tier: 15 },
       { id: uid(), label: "Watch one episode", tier: 30 },
     ],
+    todos: [],
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },
   };

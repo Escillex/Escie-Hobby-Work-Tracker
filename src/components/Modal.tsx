@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IC } from "../lib/icons";
 import "./shared.css";
 
 interface Props {
@@ -19,7 +20,7 @@ export function Modal({ title, onClose, children }: Props) {
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="btn ghost icon" onClick={onClose} aria-label="Close">
-            ✕
+            {IC.close}
           </button>
         </div>
         {children}

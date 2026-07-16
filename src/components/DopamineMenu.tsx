@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DopamineTier } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
+import { IC } from "../lib/icons";
 import "./DopamineMenu.css";
 
 const TIERS: DopamineTier[] = [5, 15, 30];
@@ -31,9 +32,9 @@ export function DopamineMenu() {
   return (
     <div className="dopamine glass">
       <div className="panel-title">
-        ✨ Dopamine menu
+        {IC.bolt} Dopamine menu
         <button className="btn ghost icon add-dopamine" title="Add item" onClick={() => setAdding(!adding)}>
-          ＋
+          {IC.plus}
         </button>
       </div>
       <div className="dopamine-tiers">
@@ -50,7 +51,7 @@ export function DopamineMenu() {
           </button>
         ))}
         <button className="btn ghost surprise" onClick={surprise} disabled={items.length === 0}>
-          🎲 surprise me
+          {IC.random} surprise me
         </button>
       </div>
       {adding && (
@@ -76,7 +77,7 @@ export function DopamineMenu() {
               title="Remove"
               onClick={() => dispatch({ type: "dopamine/delete", id: d.id })}
             >
-              ✕
+              {IC.close}
             </button>
           </li>
         ))}

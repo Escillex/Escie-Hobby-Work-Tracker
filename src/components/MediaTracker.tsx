@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
+import { rawgSearch, steamOwnedGames, type RawgGame } from "../lib/games";
+import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
 import "./MediaTracker.css";
 
@@ -45,7 +48,7 @@ export function MediaTracker() {
           </button>
         ))}
         <button className="btn ghost icon" title="Add category" onClick={() => setAddingCategory(true)}>
-          ＋
+          {IC.plus}
         </button>
         {notice && <span className="media-notice">{notice}</span>}
       </div>
@@ -77,7 +80,8 @@ function CategoryView({
   onNotice: (msg: string) => void;
 }) {
   const { data, dispatch } = useApp();
-  const isAniList = category.source !== "manual";
+  const isAniList = category.source === "anilist-anime" || category.source === "anilist-manga";
+  const isGames = category.source === "games";
   const aniType = category.source === "anilist-anime" ? "ANIME" : "MANGA";
   const token = data.settings.anilistToken;
   const [syncing, setSyncing] = useState(false);
@@ -85,7 +89,7 @@ function CategoryView({
 
   const sync = async () => {
     if (!token || !data.settings.anilistUserId) {
-      onNotice("Connect AniList in settings (⚙) first");
+      onNotice("Connect AniList in settings first");
       return;
     }
     setSyncing(true);
@@ -95,6 +99,30 @@ function CategoryView({
       onNotice(`Synced ${fresh.length} ${category.name.toLowerCase()} entries`);
     } catch (e) {
       onNotice(`Sync failed: ${e}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const importSteam = async () => {
+    const { steamApiKey, steamId } = data.settings;
+    if (!steamApiKey || !steamId) {
+      onNotice("Add your Steam API key and SteamID64 in settings first");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const steam = await steamOwnedGames(steamApiKey, steamId, category.id);
+      // Keep manually added / RAWG games; replace previous Steam imports.
+      const kept = entries.filter((e) => e.steamAppId == null);
+      dispatch({
+        type: "media/replaceCategory",
+        categoryId: category.id,
+        entries: [...kept, ...steam],
+      });
+      onNotice(`Imported ${steam.length} Steam games`);
+    } catch (e) {
+      onNotice(`${e}`);
     } finally {
       setSyncing(false);
     }
@@ -125,22 +153,43 @@ function CategoryView({
     }
   };
 
+  const launch = async (entry: MediaEntry) => {
+    if (!entry.launchCommand) return;
+    try {
+      await invoke("launch_app", { command: entry.launchCommand });
+    } catch (e) {
+      onNotice(`${e}`);
+    }
+  };
+
   const current = entries.filter((e) => e.status === "CURRENT" || e.status === "REPEATING");
   const rest = entries.filter((e) => e.status !== "CURRENT" && e.status !== "REPEATING");
 
   return (
     <div className="media-body">
       <div className="media-toolbar">
-        {isAniList ? (
+        {isAniList && (
           <>
             <AniListSearch category={category} type={aniType} onNotice={onNotice} />
             <button className="btn" onClick={sync} disabled={syncing}>
-              {syncing ? "Syncing…" : "⟳ Sync"}
+              {IC.refresh} {syncing ? "Syncing…" : "Sync"}
             </button>
           </>
-        ) : (
+        )}
+        {isGames && (
+          <>
+            <RawgSearchBox category={category} onNotice={onNotice} />
+            <button className="btn" onClick={importSteam} disabled={syncing} title="Import Steam library">
+              {IC.download} {syncing ? "Importing…" : "Steam"}
+            </button>
+            <button className="btn" onClick={() => setAddingManual(true)}>
+              {IC.plus} Add
+            </button>
+          </>
+        )}
+        {!isAniList && !isGames && (
           <button className="btn" onClick={() => setAddingManual(true)}>
-            ＋ Add {category.name.replace(/s$/, "").toLowerCase()}
+            {IC.plus} Add {category.name.replace(/s$/, "").toLowerCase()}
           </button>
         )}
       </div>
@@ -150,14 +199,18 @@ function CategoryView({
           <p className="media-empty">
             {isAniList
               ? "Search above to add something, or hit Sync to pull your AniList."
-              : "Nothing here yet — add your first one."}
+              : isGames
+                ? "Search RAWG, import your Steam library, or add a game manually."
+                : "Nothing here yet — add your first one."}
           </p>
         )}
         {[...current, ...rest].map((e) => (
           <MediaCard
             key={e.id}
             entry={e}
+            hoursMode={isGames}
             onBump={() => bump(e)}
+            onLaunch={() => launch(e)}
             onStatus={(s) => setStatus(e, s)}
             onDelete={() => dispatch({ type: "media/delete", id: e.id })}
           />
@@ -167,6 +220,7 @@ function CategoryView({
       {addingManual && (
         <ManualEntryModal
           categoryId={category.id}
+          withLaunch={isGames}
           onClose={() => setAddingManual(false)}
           onSave={(entry) => {
             dispatch({ type: "media/add", entry });
@@ -180,19 +234,31 @@ function CategoryView({
 
 function MediaCard({
   entry,
+  hoursMode,
   onBump,
+  onLaunch,
   onStatus,
   onDelete,
 }: {
   entry: MediaEntry;
+  hoursMode: boolean;
   onBump: () => void;
+  onLaunch: () => void;
   onStatus: (s: MediaStatus) => void;
   onDelete: () => void;
 }) {
   return (
     <div className={`media-card status-${entry.status.toLowerCase()}`}>
       {entry.coverUrl ? (
-        <img className="media-cover" src={entry.coverUrl} alt="" loading="lazy" />
+        <img
+          className="media-cover"
+          src={entry.coverUrl}
+          alt=""
+          loading="lazy"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.visibility = "hidden";
+          }}
+        />
       ) : (
         <div className="media-cover placeholder">{entry.title.slice(0, 1)}</div>
       )}
@@ -203,11 +269,16 @@ function MediaCard({
         <div className="media-progress">
           <span>
             {entry.progress}
-            {entry.total != null ? ` / ${entry.total}` : ""}
+            {entry.total != null ? ` / ${entry.total}` : hoursMode ? " h" : ""}
           </span>
-          {entry.status !== "COMPLETED" && (
+          {!hoursMode && entry.status !== "COMPLETED" && (
             <button className="btn icon bump" title="+1" onClick={onBump}>
               +1
+            </button>
+          )}
+          {entry.launchCommand && (
+            <button className="btn icon bump" title={entry.launchCommand} onClick={onLaunch}>
+              {IC.play}
             </button>
           )}
         </div>
@@ -224,7 +295,7 @@ function MediaCard({
             ))}
           </select>
           <button className="btn ghost icon danger" title="Remove" onClick={onDelete}>
-            ✕
+            {IC.close}
           </button>
         </div>
       </div>
@@ -315,6 +386,84 @@ function AniListSearch({
   );
 }
 
+function RawgSearchBox({
+  category,
+  onNotice,
+}: {
+  category: MediaCategory;
+  onNotice: (msg: string) => void;
+}) {
+  const { data, dispatch } = useApp();
+  const apiKey = data.settings.rawgApiKey;
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<RawgGame[]>([]);
+  const [open, setOpen] = useState(false);
+  const debounce = useRef<number>(undefined);
+
+  useEffect(() => {
+    window.clearTimeout(debounce.current);
+    if (!apiKey || query.trim().length < 3) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+    debounce.current = window.setTimeout(async () => {
+      try {
+        const games = await rawgSearch(apiKey, query.trim());
+        setResults(games);
+        setOpen(true);
+      } catch (e) {
+        onNotice(`${e}`);
+      }
+    }, 350);
+    return () => window.clearTimeout(debounce.current);
+  }, [query, apiKey, onNotice]);
+
+  const add = (g: RawgGame) => {
+    setOpen(false);
+    setQuery("");
+    dispatch({
+      type: "media/add",
+      entry: {
+        id: uid(),
+        categoryId: category.id,
+        title: g.name,
+        coverUrl: g.background_image ?? undefined,
+        progress: 0,
+        total: null,
+        status: "PLANNING",
+      },
+    });
+  };
+
+  return (
+    <div className="ani-search">
+      <input
+        className="input"
+        placeholder={apiKey ? "Search RAWG games…" : "Add a RAWG key in settings to search"}
+        disabled={!apiKey}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => results.length && setOpen(true)}
+      />
+      {open && results.length > 0 && (
+        <div className="ani-results glass">
+          {results.map((g) => (
+            <button key={g.id} className="ani-result" onMouseDown={() => add(g)}>
+              {g.background_image && <img src={g.background_image} alt="" loading="lazy" />}
+              <span>
+                {g.name}
+                {g.released ? ` (${g.released.slice(0, 4)})` : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddCategoryModal({
   onClose,
   onSave,
@@ -331,7 +480,7 @@ function AddCategoryModal({
           className="input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Games, Books, …"
+          placeholder="Books, Podcasts, …"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && name.trim()) onSave(name.trim());
@@ -349,15 +498,19 @@ function AddCategoryModal({
 
 function ManualEntryModal({
   categoryId,
+  withLaunch,
   onClose,
   onSave,
 }: {
   categoryId: string;
+  withLaunch: boolean;
   onClose: () => void;
   onSave: (e: MediaEntry) => void;
 }) {
   const [title, setTitle] = useState("");
   const [total, setTotal] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
+  const [launchCommand, setLaunchCommand] = useState("");
   const [status, setStatus] = useState<MediaStatus>("PLANNING");
 
   return (
@@ -367,7 +520,7 @@ function ManualEntryModal({
         <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </div>
       <div className="field">
-        <label>Total episodes / parts (optional)</label>
+        <label>{withLaunch ? "Total (optional)" : "Total episodes / parts (optional)"}</label>
         <input
           className="input"
           type="number"
@@ -376,6 +529,26 @@ function ManualEntryModal({
           onChange={(e) => setTotal(e.target.value)}
         />
       </div>
+      <div className="field">
+        <label>Cover image URL (optional)</label>
+        <input
+          className="input"
+          value={coverUrl}
+          onChange={(e) => setCoverUrl(e.target.value)}
+          placeholder="https://…"
+        />
+      </div>
+      {withLaunch && (
+        <div className="field">
+          <label>Launch command (optional)</label>
+          <input
+            className="input"
+            value={launchCommand}
+            onChange={(e) => setLaunchCommand(e.target.value)}
+            placeholder="hydra, xdg-open steam://rungameid/…, an-anime-game-launcher"
+          />
+        </div>
+      )}
       <div className="field">
         <label>Status</label>
         <select className="input" value={status} onChange={(e) => setStatus(e.target.value as MediaStatus)}>
@@ -397,6 +570,8 @@ function ManualEntryModal({
               title: title.trim(),
               progress: 0,
               total: total ? Number(total) : null,
+              coverUrl: coverUrl.trim() || undefined,
+              launchCommand: launchCommand.trim() || undefined,
               status,
               completedAt: status === "COMPLETED" ? localDate() : undefined,
             })

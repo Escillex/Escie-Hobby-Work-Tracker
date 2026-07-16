@@ -1,4 +1,5 @@
 import { useApp } from "../lib/state";
+import { IC } from "../lib/icons";
 import "./NowNextCard.css";
 
 export function NowNextCard() {
@@ -29,7 +30,7 @@ export function NowNextCard() {
             <p className="now-text">{now.text}</p>
             <div className="now-actions">
               <button className="btn primary" onClick={finishNow}>
-                ✓ Done{next ? " → pull next" : ""}
+                {IC.check} Done{next ? " → pull next" : ""}
               </button>
               <button
                 className="btn ghost"

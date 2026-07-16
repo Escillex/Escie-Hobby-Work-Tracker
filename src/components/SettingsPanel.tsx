@@ -1,15 +1,44 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useApp } from "../lib/state";
 import { authUrl, fetchViewer } from "../lib/anilist";
 import { Modal } from "./Modal";
 
+const FONT_CANDIDATES = [
+  "RecMonoCasual Nerd Font",
+  "RecMonoCasual Nerd Font Propo",
+  "RecMonoDuotone Nerd Font",
+  "RecMonoLinear Nerd Font",
+  "RecMonoSmCasual Nerd Font",
+  "JetBrainsMono Nerd Font",
+  "FiraCode Nerd Font",
+  "Hack Nerd Font",
+  "Iosevka Nerd Font",
+  "CaskaydiaCove Nerd Font",
+  "MesloLGS Nerd Font",
+  "SauceCodePro Nerd Font",
+  "UbuntuMono Nerd Font",
+  "RobotoMono Nerd Font",
+  "Mononoki Nerd Font",
+  "VictorMono Nerd Font",
+  "Maple Mono NF",
+];
+
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { data, dispatch } = useApp();
+  const s = data.settings;
   const [clientId, setClientId] = useState("");
-  const [token, setToken] = useState(data.settings.anilistToken ?? "");
-  const [github, setGithub] = useState(data.settings.githubUser);
+  const [token, setToken] = useState(s.anilistToken ?? "");
   const [status, setStatus] = useState<string | null>(null);
+
+  const set = (patch: Partial<typeof s>) =>
+    dispatch({ type: "settings/update", settings: patch });
+
+  const installedFonts = useMemo(
+    () => FONT_CANDIDATES.filter((f) => document.fonts.check(`12px "${f}"`)),
+    [],
+  );
 
   const connect = async () => {
     const t = token.trim();
@@ -17,32 +46,27 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setStatus("Verifying token…");
     try {
       const viewer = await fetchViewer(t);
-      dispatch({
-        type: "settings/update",
-        settings: {
-          anilistToken: t,
-          anilistUserId: viewer.id,
-          anilistUserName: viewer.name,
-        },
-      });
-      setStatus(`Connected as ${viewer.name} ✓`);
+      set({ anilistToken: t, anilistUserId: viewer.id, anilistUserName: viewer.name });
+      setStatus(`Connected as ${viewer.name}`);
     } catch (e) {
       setStatus(`Failed: ${e}`);
     }
   };
 
+  const pickVault = async () => {
+    const dir = await openDialog({ directory: true, title: "Pick your Obsidian vault" });
+    if (typeof dir === "string") set({ vaultPath: dir });
+  };
+
   return (
     <Modal title="Settings" onClose={onClose}>
       <div className="panel-title">AniList</div>
-      {data.settings.anilistUserName ? (
-        <p style={{ margin: 0, color: "var(--rp-foam)" }}>
-          Connected as {data.settings.anilistUserName}
-        </p>
+      {s.anilistUserName ? (
+        <p style={{ margin: 0, color: "var(--rp-foam)" }}>Connected as {s.anilistUserName}</p>
       ) : (
         <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--rp-subtle)" }}>
-          1. Create an API client at anilist.co/settings/developer (any name, pin
-          redirect). 2. Enter its ID below and hit Authorize. 3. Copy the token
-          AniList shows you and paste it here.
+          1. Create an API client at anilist.co/settings/developer (pin redirect).
+          2. Enter its ID and Authorize. 3. Paste the token AniList shows you.
         </p>
       )}
       <div className="field">
@@ -59,7 +83,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             disabled={!clientId.trim()}
             onClick={() => openUrl(authUrl(clientId.trim()))}
           >
-            Authorize ↗
+            Authorize
           </button>
         </div>
       </div>
@@ -80,19 +104,85 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       </div>
       {status && <p style={{ margin: 0, fontSize: "0.82rem" }}>{status}</p>}
 
-      <div className="panel-title" style={{ marginTop: "0.5rem" }}>
-        GitHub
-      </div>
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>GitHub</div>
       <div className="field">
         <label>Username (public contributions)</label>
         <input
           className="input"
-          value={github}
-          onChange={(e) => setGithub(e.target.value)}
-          onBlur={() =>
-            dispatch({ type: "settings/update", settings: { githubUser: github.trim() } })
-          }
+          defaultValue={s.githubUser}
+          onBlur={(e) => set({ githubUser: e.target.value.trim() })}
         />
+      </div>
+
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>Games</div>
+      <div className="field">
+        <label>RAWG API key (free at rawg.io/apidocs)</label>
+        <input
+          className="input"
+          type="password"
+          defaultValue={s.rawgApiKey ?? ""}
+          onBlur={(e) => set({ rawgApiKey: e.target.value.trim() || undefined })}
+        />
+      </div>
+      <div className="field">
+        <label>Steam Web API key (steamcommunity.com/dev/apikey)</label>
+        <input
+          className="input"
+          type="password"
+          defaultValue={s.steamApiKey ?? ""}
+          onBlur={(e) => set({ steamApiKey: e.target.value.trim() || undefined })}
+        />
+      </div>
+      <div className="field">
+        <label>SteamID64 (17 digits, see steamid.io)</label>
+        <input
+          className="input"
+          defaultValue={s.steamId ?? ""}
+          placeholder="7656119…"
+          onBlur={(e) => set({ steamId: e.target.value.trim() || undefined })}
+        />
+      </div>
+
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>Obsidian</div>
+      <div className="field">
+        <label>Vault folder</label>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            className="input"
+            value={s.vaultPath ?? ""}
+            placeholder="pick or paste a path"
+            onChange={(e) => set({ vaultPath: e.target.value || undefined })}
+          />
+          <button className="btn" onClick={pickVault}>
+            Browse
+          </button>
+        </div>
+      </div>
+      <div className="field">
+        <label>Inbox note (impulses get appended here)</label>
+        <input
+          className="input"
+          defaultValue={s.vaultInboxNote ?? ""}
+          placeholder="Hyperfocus Inbox.md"
+          onBlur={(e) => set({ vaultInboxNote: e.target.value.trim() || undefined })}
+        />
+      </div>
+
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>Appearance</div>
+      <div className="field">
+        <label>Font family {installedFonts.length > 0 && "(detected Nerd Fonts listed)"}</label>
+        <input
+          className="input"
+          list="font-options"
+          defaultValue={s.fontFamily ?? ""}
+          placeholder="system default"
+          onBlur={(e) => set({ fontFamily: e.target.value.trim() || undefined })}
+        />
+        <datalist id="font-options">
+          {installedFonts.map((f) => (
+            <option key={f} value={f} />
+          ))}
+        </datalist>
       </div>
     </Modal>
   );

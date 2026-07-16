@@ -15,6 +15,7 @@ import type {
   MediaCategory,
   MediaEntry,
   DopamineItem,
+  Todo,
   Settings,
 } from "./types";
 import { localDate, uid } from "./types";
@@ -36,6 +37,9 @@ export type Action =
   | { type: "media/delete"; id: string }
   | { type: "dopamine/add"; item: DopamineItem }
   | { type: "dopamine/delete"; id: string }
+  | { type: "todo/add"; todo: Todo }
+  | { type: "todo/update"; todo: Todo }
+  | { type: "todo/delete"; id: string }
   | { type: "settings/update"; settings: Partial<Settings> };
 
 function reducer(state: AppData, action: Action): AppData {
@@ -159,6 +163,15 @@ function reducer(state: AppData, action: Action): AppData {
         ...state,
         dopamine: state.dopamine.filter((d) => d.id !== action.id),
       };
+    case "todo/add":
+      return { ...state, todos: [...state.todos, action.todo] };
+    case "todo/update":
+      return {
+        ...state,
+        todos: state.todos.map((t) => (t.id === action.todo.id ? action.todo : t)),
+      };
+    case "todo/delete":
+      return { ...state, todos: state.todos.filter((t) => t.id !== action.id) };
     case "settings/update":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     default:
@@ -179,6 +192,7 @@ const EMPTY: AppData = {
   impulses: [],
   media: { categories: [], entries: [] },
   dopamine: [],
+  todos: [],
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },
 };

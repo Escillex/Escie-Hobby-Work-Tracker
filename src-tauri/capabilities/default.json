@@ -7,11 +7,19 @@
     "core:default",
     "opener:default",
     "store:default",
+    "dialog:default",
+    "notification:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "obsidian://*" }]
+    },
     {
       "identifier": "http:default",
       "allow": [
         { "url": "https://graphql.anilist.co/*" },
-        { "url": "https://github-contributions-api.jogruber.de/*" }
+        { "url": "https://github-contributions-api.jogruber.de/*" },
+        { "url": "https://api.rawg.io/*" },
+        { "url": "https://api.steampowered.com/*" }
       ]
     }
   ]

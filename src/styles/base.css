@@ -13,13 +13,20 @@ body,
   margin: 0;
 }
 
+:root {
+  /* Overridden live by the font setting; the Nerd Font fallbacks make the
+     glyph icons render even before a font is chosen. */
+  --app-font: "RecMonoCasual Nerd Font", "Symbols Nerd Font", system-ui,
+    "Segoe UI", sans-serif;
+}
+
 body {
   background:
     radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb, var(--rp-iris) 9%, transparent), transparent 60%),
     radial-gradient(1000px 500px at 110% 110%, color-mix(in srgb, var(--rp-pine) 12%, transparent), transparent 60%),
     var(--rp-base);
   color: var(--rp-text);
-  font-family: system-ui, "Segoe UI", sans-serif;
+  font-family: var(--app-font);
   font-size: 15px;
   line-height: 1.45;
   overflow: hidden;

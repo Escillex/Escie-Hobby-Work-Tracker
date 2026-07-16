@@ -1,5 +1,6 @@
 import { useApp } from "../lib/state";
 import { localDate } from "../lib/types";
+import { IC } from "../lib/icons";
 import "./StatsBar.css";
 
 export function StatsBar() {
@@ -18,13 +19,13 @@ export function StatsBar() {
   return (
     <footer className="stats-bar glass">
       <span title="Days in a row you've opened the dash">
-        🔥 {data.stats.streak} day{data.stats.streak === 1 ? "" : "s"}
+        {IC.fire} {data.stats.streak} day{data.stats.streak === 1 ? "" : "s"}
       </span>
       <span title="Impulses captured in the last 7 days">
-        🧠 {capturedThisWeek} captured this week
+        {IC.bulb} {capturedThisWeek} captured this week
       </span>
       <span title="Media completed this month">
-        ✅ {finishedThisMonth} finished this month
+        {IC.check} {finishedThisMonth} finished this month
       </span>
     </footer>
   );

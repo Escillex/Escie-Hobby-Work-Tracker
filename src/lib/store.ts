@@ -23,10 +23,31 @@ export function rollStreak(data: AppData): AppData {
   return { ...data, stats: { lastOpenedDate: today, streak } };
 }
 
+/** Add anything newer app versions expect that older data files lack. */
+function migrate(data: AppData): AppData {
+  let next = data;
+  if (!next.media.categories.some((c) => c.source === "games")) {
+    next = {
+      ...next,
+      media: {
+        ...next.media,
+        categories: [
+          ...next.media.categories,
+          { id: "games", name: "Games", source: "games" },
+        ],
+      },
+    };
+  }
+  if (!next.todos) {
+    next = { ...next, todos: [] };
+  }
+  return next;
+}
+
 export async function loadData(): Promise<AppData> {
   const s = await getStore();
   const existing = await s.get<AppData>("data");
-  const data = rollStreak(existing ?? defaultData());
+  const data = rollStreak(migrate(existing ?? defaultData()));
   await s.set("data", data);
   return data;
 }
