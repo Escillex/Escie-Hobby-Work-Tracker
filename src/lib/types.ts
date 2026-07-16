@@ -104,7 +104,6 @@ export interface Settings {
   anilistUserId?: number;
   anilistUserName?: string;
   githubUser: string;
-  rawgApiKey?: string;
   steamApiKey?: string;
   steamId?: string;
   vaultPath?: string;

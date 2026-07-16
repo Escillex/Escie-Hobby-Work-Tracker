@@ -115,15 +115,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="panel-title" style={{ marginTop: "0.5rem" }}>Games</div>
-      <div className="field">
-        <label>RAWG API key (free at rawg.io/apidocs)</label>
-        <input
-          className="input"
-          type="password"
-          defaultValue={s.rawgApiKey ?? ""}
-          onBlur={(e) => set({ rawgApiKey: e.target.value.trim() || undefined })}
-        />
-      </div>
+      <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--rp-subtle)" }}>
+        Game search uses Steam's public catalog — no key needed. The two keys
+        below are only for importing your owned Steam library with playtimes.
+      </p>
       <div className="field">
         <label>Steam Web API key (steamcommunity.com/dev/apikey)</label>
         <input

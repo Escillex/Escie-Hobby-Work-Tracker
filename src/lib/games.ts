@@ -2,21 +2,30 @@ import { fetch } from "@tauri-apps/plugin-http";
 import type { MediaEntry } from "./types";
 import { uid } from "./types";
 
-export interface RawgGame {
-  id: number;
+export const steamCover = (appid: number) =>
+  `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`;
+
+export const steamLaunch = (appid: number) => `xdg-open steam://rungameid/${appid}`;
+
+export interface GameResult {
+  appid: number;
   name: string;
-  background_image: string | null;
-  released: string | null;
+  thumb: string;
 }
 
-/** Search the RAWG games database. Free key from https://rawg.io/apidocs */
-export async function rawgSearch(apiKey: string, query: string): Promise<RawgGame[]> {
+/** Search Steam's public storefront catalog — no API key required. */
+export async function steamStoreSearch(query: string): Promise<GameResult[]> {
   const res = await fetch(
-    `https://api.rawg.io/api/games?key=${encodeURIComponent(apiKey)}&search=${encodeURIComponent(query)}&page_size=8`,
+    `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`,
   );
-  if (!res.ok) throw new Error(`RAWG search failed (${res.status})`);
-  const json: { results: RawgGame[] } = await res.json();
-  return json.results;
+  if (!res.ok) throw new Error(`Steam store search failed (${res.status})`);
+  const json: { items?: { id: number; name: string; tiny_image?: string }[] } =
+    await res.json();
+  return (json.items ?? []).map((i) => ({
+    appid: i.id,
+    name: i.name,
+    thumb: i.tiny_image ?? steamCover(i.id),
+  }));
 }
 
 interface SteamGame {
@@ -45,12 +54,12 @@ export async function steamOwnedGames(
       id: uid(),
       categoryId,
       title: g.name,
-      coverUrl: `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.appid}/library_600x900.jpg`,
+      coverUrl: steamCover(g.appid),
       // For games, progress doubles as hours played.
       progress: Math.round(g.playtime_forever / 60),
       total: null,
       status: g.playtime_forever > 0 ? ("CURRENT" as const) : ("PLANNING" as const),
       steamAppId: g.appid,
-      launchCommand: `xdg-open steam://rungameid/${g.appid}`,
+      launchCommand: steamLaunch(g.appid),
     }));
 }

@@ -18,7 +18,7 @@
       "allow": [
         { "url": "https://graphql.anilist.co/*" },
         { "url": "https://github-contributions-api.jogruber.de/*" },
-        { "url": "https://api.rawg.io/*" },
+        { "url": "https://store.steampowered.com/*" },
         { "url": "https://api.steampowered.com/*" }
       ]
     }

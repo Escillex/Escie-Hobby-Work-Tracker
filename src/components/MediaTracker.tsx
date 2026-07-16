@@ -4,7 +4,13 @@ import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus } from "../l
 import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
-import { rawgSearch, steamOwnedGames, type RawgGame } from "../lib/games";
+import {
+  steamStoreSearch,
+  steamOwnedGames,
+  steamCover,
+  steamLaunch,
+  type GameResult,
+} from "../lib/games";
 import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
 import "./MediaTracker.css";
@@ -180,7 +186,7 @@ function CategoryView({
         )}
         {isGames && (
           <>
-            <RawgSearchBox category={category} onNotice={onNotice} />
+            <GameSearchBox category={category} onNotice={onNotice} />
             <button className="btn" onClick={importSteam} disabled={syncing} title="Import Steam library">
               {IC.download} {syncing ? "Importing…" : "Steam"}
             </button>
@@ -501,30 +507,29 @@ function AniListSearch({
   );
 }
 
-function RawgSearchBox({
+function GameSearchBox({
   category,
   onNotice,
 }: {
   category: MediaCategory;
   onNotice: (msg: string) => void;
 }) {
-  const { data, dispatch } = useApp();
-  const apiKey = data.settings.rawgApiKey;
+  const { dispatch } = useApp();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<RawgGame[]>([]);
+  const [results, setResults] = useState<GameResult[]>([]);
   const [open, setOpen] = useState(false);
   const debounce = useRef<number>(undefined);
 
   useEffect(() => {
     window.clearTimeout(debounce.current);
-    if (!apiKey || query.trim().length < 3) {
+    if (query.trim().length < 2) {
       setResults([]);
       setOpen(false);
       return;
     }
     debounce.current = window.setTimeout(async () => {
       try {
-        const games = await rawgSearch(apiKey, query.trim());
+        const games = await steamStoreSearch(query.trim());
         setResults(games);
         setOpen(true);
       } catch (e) {
@@ -532,9 +537,9 @@ function RawgSearchBox({
       }
     }, 350);
     return () => window.clearTimeout(debounce.current);
-  }, [query, apiKey, onNotice]);
+  }, [query, onNotice]);
 
-  const add = (g: RawgGame) => {
+  const add = (g: GameResult) => {
     setOpen(false);
     setQuery("");
     dispatch({
@@ -543,10 +548,12 @@ function RawgSearchBox({
         id: uid(),
         categoryId: category.id,
         title: g.name,
-        coverUrl: g.background_image ?? undefined,
+        coverUrl: steamCover(g.appid),
         progress: 0,
         total: null,
         status: "PLANNING",
+        steamAppId: g.appid,
+        launchCommand: steamLaunch(g.appid),
       },
     });
   };
@@ -555,8 +562,7 @@ function RawgSearchBox({
     <div className="ani-search">
       <input
         className="input"
-        placeholder={apiKey ? "Search RAWG games…" : "Add a RAWG key in settings to search"}
-        disabled={!apiKey}
+        placeholder="Search games…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -565,12 +571,9 @@ function RawgSearchBox({
       {open && results.length > 0 && (
         <div className="ani-results glass">
           {results.map((g) => (
-            <button key={g.id} className="ani-result" onMouseDown={() => add(g)}>
-              {g.background_image && <img src={g.background_image} alt="" loading="lazy" />}
-              <span>
-                {g.name}
-                {g.released ? ` (${g.released.slice(0, 4)})` : ""}
-              </span>
+            <button key={g.appid} className="ani-result" onMouseDown={() => add(g)}>
+              {g.thumb && <img src={g.thumb} alt="" loading="lazy" />}
+              <span>{g.name}</span>
             </button>
           ))}
         </div>
