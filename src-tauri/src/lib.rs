@@ -63,6 +63,51 @@ fn create_note(dir: String, filename: String, content: String) -> Result<String,
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Scan Steam's library folders for installed games, returning their app ids.
+/// Reads `appmanifest_<id>.acf` filenames across every library path found in
+/// the `libraryfolders.vdf` files. No Steam API needed — purely local.
+#[tauri::command]
+fn installed_steam_appids() -> Vec<u32> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut steamapps: Vec<String> = vec![
+        format!("{home}/.steam/steam/steamapps"),
+        format!("{home}/.local/share/Steam/steamapps"),
+    ];
+
+    // Pull extra library paths (e.g. other drives) from libraryfolders.vdf.
+    for base in steamapps.clone() {
+        let vdf = format!("{base}/libraryfolders.vdf");
+        if let Ok(content) = std::fs::read_to_string(&vdf) {
+            for line in content.lines() {
+                if line.contains("\"path\"") {
+                    if let Some(path) = line.split('"').nth(3) {
+                        steamapps.push(format!("{path}/steamapps"));
+                    }
+                }
+            }
+        }
+    }
+
+    let mut ids = std::collections::HashSet::new();
+    for dir in steamapps {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if let Some(id) = name
+                .strip_prefix("appmanifest_")
+                .and_then(|r| r.strip_suffix(".acf"))
+                .and_then(|s| s.parse::<u32>().ok())
+            {
+                ids.insert(id);
+            }
+        }
+    }
+    ids.into_iter().collect()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -74,7 +119,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             launch_app,
             append_note,
-            create_note
+            create_note,
+            installed_steam_appids
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

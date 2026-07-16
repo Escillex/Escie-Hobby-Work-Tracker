@@ -1,6 +1,13 @@
 import { fetch } from "@tauri-apps/plugin-http";
+import { invoke } from "@tauri-apps/api/core";
 import type { MediaEntry } from "./types";
 import { uid } from "./types";
+
+/** App ids of Steam games currently installed on this machine. */
+export async function installedSteamAppIds(): Promise<Set<number>> {
+  const ids = await invoke<number[]>("installed_steam_appids");
+  return new Set(ids);
+}
 
 export const steamCover = (appid: number) =>
   `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`;

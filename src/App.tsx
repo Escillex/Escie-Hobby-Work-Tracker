@@ -6,7 +6,6 @@ import { NowNextCard } from "./components/NowNextCard";
 import { MediaTracker } from "./components/MediaTracker";
 import { TodoPanel } from "./components/TodoPanel";
 import { HyperfocusTimer } from "./components/HyperfocusTimer";
-import { DopamineMenu } from "./components/DopamineMenu";
 import { GitHubGraph } from "./components/GitHubGraph";
 import { StatsBar } from "./components/StatsBar";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -40,7 +39,6 @@ function Dashboard() {
       <aside className="dash-rail">
         <TodoPanel />
         <HyperfocusTimer />
-        <DopamineMenu />
         <GitHubGraph />
       </aside>
       <StatsBar />

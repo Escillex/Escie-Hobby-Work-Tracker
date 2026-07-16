@@ -9,6 +9,7 @@ import {
   steamOwnedGames,
   steamCover,
   steamLaunch,
+  installedSteamAppIds,
   type GameResult,
 } from "../lib/games";
 import { IC } from "../lib/icons";
@@ -94,6 +95,16 @@ function CategoryView({
   const [addingManual, setAddingManual] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailEntry = entries.find((e) => e.id === detailId) ?? null;
+  const [installed, setInstalled] = useState<Set<number> | null>(null);
+  const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
+
+  // Detect locally-installed Steam games when the Games tab is shown.
+  useEffect(() => {
+    if (!isGames) return;
+    installedSteamAppIds()
+      .then(setInstalled)
+      .catch(() => setInstalled(new Set()));
+  }, [isGames]);
 
   const sync = async () => {
     if (!token || !data.settings.anilistUserId) {
@@ -170,8 +181,18 @@ function CategoryView({
     }
   };
 
-  const current = entries.filter((e) => e.status === "CURRENT" || e.status === "REPEATING");
-  const rest = entries.filter((e) => e.status !== "CURRENT" && e.status !== "REPEATING");
+  const isInstalled = (e: MediaEntry) =>
+    e.steamAppId != null && (installed?.has(e.steamAppId) ?? false);
+
+  const visible =
+    isGames && installFilter !== "all"
+      ? entries.filter((e) =>
+          installFilter === "installed" ? isInstalled(e) : !isInstalled(e),
+        )
+      : entries;
+
+  const current = visible.filter((e) => e.status === "CURRENT" || e.status === "REPEATING");
+  const rest = visible.filter((e) => e.status !== "CURRENT" && e.status !== "REPEATING");
 
   return (
     <div className="media-body">
@@ -193,6 +214,24 @@ function CategoryView({
             <button className="btn" onClick={() => setAddingManual(true)}>
               {IC.plus} Add
             </button>
+            <div className="install-filter">
+              {(["all", "installed", "not"] as const).map((f) => (
+                <button
+                  key={f}
+                  className={`install-tab ${installFilter === f ? "active" : ""}`}
+                  onClick={() => setInstallFilter(f)}
+                  title={
+                    f === "installed"
+                      ? "Only games installed on this machine"
+                      : f === "not"
+                        ? "Only games not currently installed"
+                        : "All games"
+                  }
+                >
+                  {f === "not" ? "not installed" : f}
+                </button>
+              ))}
+            </div>
           </>
         )}
         {!isAniList && !isGames && (
@@ -203,12 +242,14 @@ function CategoryView({
       </div>
 
       <div className="media-grid-wrap">
-        {entries.length === 0 && (
+        {visible.length === 0 && (
           <p className="media-empty">
             {isAniList
               ? "Search above to add something, or hit Sync to pull your AniList."
               : isGames
-                ? "Search RAWG, import your Steam library, or add a game manually."
+                ? entries.length > 0
+                  ? "No games match this filter."
+                  : "Search games, import your Steam library, or add one manually."
                 : "Nothing here yet — add your first one."}
           </p>
         )}
@@ -217,6 +258,7 @@ function CategoryView({
             key={e.id}
             entry={e}
             hoursMode={isGames}
+            installed={isGames ? isInstalled(e) : undefined}
             onBump={() => bump(e)}
             onLaunch={() => launch(e)}
             onStatus={(s) => setStatus(e, s)}
@@ -342,6 +384,7 @@ function EntryDetailModal({
 function MediaCard({
   entry,
   hoursMode,
+  installed,
   onBump,
   onLaunch,
   onStatus,
@@ -350,6 +393,7 @@ function MediaCard({
 }: {
   entry: MediaEntry;
   hoursMode: boolean;
+  installed?: boolean;
   onBump: () => void;
   onLaunch: () => void;
   onStatus: (s: MediaStatus) => void;
@@ -377,6 +421,7 @@ function MediaCard({
       )}
       <div className="media-info">
         <span className="media-title" title={entry.title}>
+          {installed && <span className="installed-dot" title="Installed" />}
           {entry.title}
         </span>
         <div className="media-progress">

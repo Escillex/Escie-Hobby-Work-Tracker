@@ -75,13 +75,7 @@ export interface MediaEntry {
   checklist?: ChecklistItem[];
 }
 
-export type DopamineTier = 5 | 15 | 30;
-
-export interface DopamineItem {
-  id: string;
-  label: string;
-  tier: DopamineTier;
-}
+export type Recurrence = "none" | "daily" | "weekly";
 
 export interface Todo {
   id: string;
@@ -89,6 +83,8 @@ export interface Todo {
   createdAt: string; // ISO
   dueAt?: string; // ISO, optional — undated todos are allowed
   earlyMinutes: number; // heads-up notification this many minutes before dueAt
+  recurrence: Recurrence;
+  lastDone?: string; // YYYY-MM-DD a recurring task was last completed
   notifiedEarly?: boolean;
   notifiedDue?: boolean;
   done: boolean;
@@ -118,7 +114,6 @@ export interface AppData {
     categories: MediaCategory[];
     entries: MediaEntry[];
   };
-  dopamine: DopamineItem[];
   todos: Todo[];
   stats: Stats;
   settings: Settings;
@@ -150,13 +145,6 @@ export function defaultData(): AppData {
       ],
       entries: [],
     },
-    dopamine: [
-      { id: uid(), label: "Make a cup of tea", tier: 5 },
-      { id: uid(), label: "Stretch for one song", tier: 5 },
-      { id: uid(), label: "Quick walk around the block", tier: 15 },
-      { id: uid(), label: "Tidy the desk", tier: 15 },
-      { id: uid(), label: "Watch one episode", tier: 30 },
-    ],
     todos: [],
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },

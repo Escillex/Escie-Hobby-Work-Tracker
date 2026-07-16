@@ -14,7 +14,6 @@ import type {
   ImpulseStatus,
   MediaCategory,
   MediaEntry,
-  DopamineItem,
   Todo,
   Settings,
 } from "./types";
@@ -35,8 +34,6 @@ export type Action =
   | { type: "media/add"; entry: MediaEntry }
   | { type: "media/update"; entry: MediaEntry }
   | { type: "media/delete"; id: string }
-  | { type: "dopamine/add"; item: DopamineItem }
-  | { type: "dopamine/delete"; id: string }
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
@@ -156,13 +153,6 @@ function reducer(state: AppData, action: Action): AppData {
           entries: state.media.entries.filter((e) => e.id !== action.id),
         },
       };
-    case "dopamine/add":
-      return { ...state, dopamine: [...state.dopamine, action.item] };
-    case "dopamine/delete":
-      return {
-        ...state,
-        dopamine: state.dopamine.filter((d) => d.id !== action.id),
-      };
     case "todo/add":
       return { ...state, todos: [...state.todos, action.todo] };
     case "todo/update":
@@ -191,7 +181,6 @@ const EMPTY: AppData = {
   launchers: [],
   impulses: [],
   media: { categories: [], entries: [] },
-  dopamine: [],
   todos: [],
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },

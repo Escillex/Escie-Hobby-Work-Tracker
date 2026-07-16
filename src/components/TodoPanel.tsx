@@ -1,36 +1,43 @@
 import { useEffect, useState } from "react";
-import type { Todo } from "../lib/types";
-import { uid } from "../lib/types";
+import type { Recurrence, Todo } from "../lib/types";
+import { uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { notify } from "../lib/notify";
 import { IC } from "../lib/icons";
 import "./TodoPanel.css";
 
 const EARLY_CHOICES = [5, 15, 30, 60];
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
-function fmtDue(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const sameDay = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (sameDay) return time;
-  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
-}
+/** Local YYYY-MM-DD for a given date. */
+const dayKey = (d: Date) => localDate(d);
+
+/** The local date portion of an ISO due timestamp. */
+const dueDay = (iso: string) => dayKey(new Date(iso));
 
 export function TodoPanel() {
   const { data, dispatch } = useApp();
+  const today = localDate();
+  const [selected, setSelected] = useState(today);
+  const [view, setView] = useState(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
   const [text, setText] = useState("");
-  const [dueAt, setDueAt] = useState("");
+  const [time, setTime] = useState("09:00");
   const [early, setEarly] = useState(30);
-  const [expanded, setExpanded] = useState(false);
+  const [repeat, setRepeat] = useState<Recurrence>("none");
 
-  // Notification scheduler: check every 20s for todos crossing their
-  // early-warning or due thresholds. Flags persist so restarts don't re-fire.
+  // Notification scheduler for dated (one-off) todos.
   useEffect(() => {
     const check = () => {
       const now = Date.now();
       for (const t of data.todos) {
-        if (t.done || !t.dueAt) continue;
+        if (t.done || t.recurrence !== "none" || !t.dueAt) continue;
         const due = new Date(t.dueAt).getTime();
         if (!t.notifiedDue && now >= due) {
           notify("Due now", t.text);
@@ -47,6 +54,23 @@ export function TodoPanel() {
     return () => window.clearInterval(timer);
   }, [data.todos, dispatch]);
 
+  const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
+  const recurring = data.todos.filter((t) => t.recurrence !== "none");
+  const dayTodos = dated
+    .filter((t) => dueDay(t.dueAt!) === selected)
+    .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
+
+  // Days in the viewed month that carry at least one dated todo.
+  const dots = new Map<string, "pending" | "overdue" | "done">();
+  for (const t of dated) {
+    const key = dueDay(t.dueAt!);
+    const overdue = !t.done && new Date(t.dueAt!).getTime() < Date.now();
+    const cur = dots.get(key);
+    const rank = { done: 0, pending: 1, overdue: 2 } as const;
+    const next = t.done ? "done" : overdue ? "overdue" : "pending";
+    if (!cur || rank[next] > rank[cur]) dots.set(key, next);
+  }
+
   const add = () => {
     const t = text.trim();
     if (!t) return;
@@ -54,103 +78,216 @@ export function TodoPanel() {
       id: uid(),
       text: t,
       createdAt: new Date().toISOString(),
-      dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
       earlyMinutes: early,
+      recurrence: repeat,
       done: false,
+      dueAt:
+        repeat === "none"
+          ? new Date(`${selected}T${time || "09:00"}`).toISOString()
+          : undefined,
     };
     dispatch({ type: "todo/add", todo });
     setText("");
-    setDueAt("");
-    setExpanded(false);
   };
 
-  const pending = [...data.todos]
-    .filter((t) => !t.done)
-    .sort((a, b) => (a.dueAt ?? "9999").localeCompare(b.dueAt ?? "9999"));
-  const doneCount = data.todos.filter((t) => t.done).length;
+  const complete = (t: Todo) => {
+    if (t.recurrence === "none") {
+      dispatch({ type: "todo/update", todo: { ...t, done: true } });
+    } else {
+      // Recurring: tick for today; resetRecurring reopens it next period.
+      dispatch({ type: "todo/update", todo: { ...t, done: true, lastDone: today } });
+    }
+  };
+
+  const monthGrid = buildMonthGrid(view.year, view.month);
 
   return (
     <div className="todo-panel glass">
-      <div className="panel-title">
-        {IC.check} To-dos
-        {doneCount > 0 && (
-          <button
-            className="btn ghost clear-done"
-            title="Clear finished to-dos"
-            onClick={() =>
-              data.todos.filter((t) => t.done).forEach((t) =>
-                dispatch({ type: "todo/delete", id: t.id }),
-              )
-            }
-          >
-            clear {doneCount} done
+      <div className="panel-title">{IC.check} To-dos</div>
+
+      <div className="cal">
+        <div className="cal-head">
+          <button className="btn ghost icon" onClick={() => setView(shiftMonth(view, -1))}>
+            ‹
           </button>
-        )}
+          <span className="cal-title">
+            {MONTHS[view.month]} {view.year}
+          </span>
+          <button className="btn ghost icon" onClick={() => setView(shiftMonth(view, 1))}>
+            ›
+          </button>
+        </div>
+        <div className="cal-grid">
+          {WEEKDAYS.map((w, i) => (
+            <span key={i} className="cal-dow">
+              {w}
+            </span>
+          ))}
+          {monthGrid.map((cell, i) =>
+            cell === null ? (
+              <span key={i} className="cal-cell empty" />
+            ) : (
+              <button
+                key={i}
+                className={`cal-cell ${cell === today ? "today" : ""} ${
+                  cell === selected ? "selected" : ""
+                }`}
+                onClick={() => setSelected(cell)}
+              >
+                {Number(cell.slice(-2))}
+                {dots.has(cell) && <span className={`cal-dot ${dots.get(cell)}`} />}
+              </button>
+            ),
+          )}
+        </div>
       </div>
-      <input
-        className="input"
-        placeholder="Add a to-do… (Enter)"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onFocus={() => setExpanded(true)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") add();
-        }}
-      />
-      {expanded && (
-        <div className="todo-schedule fade-up">
-          <input
-            className="input"
-            type="datetime-local"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-          />
+
+      <div className="todo-add">
+        <input
+          className="input"
+          placeholder={
+            repeat === "none" ? `Add for ${prettyDay(selected, today)}…` : "Repeating task…"
+          }
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
+        />
+        <div className="todo-add-row">
           <select
             className="input"
-            value={early}
-            title="Heads-up notification this long before it's due"
-            onChange={(e) => setEarly(Number(e.target.value))}
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value as Recurrence)}
+            title="Repeat"
           >
-            {EARLY_CHOICES.map((m) => (
-              <option key={m} value={m}>
-                {m}m early
-              </option>
-            ))}
+            <option value="none">once</option>
+            <option value="daily">daily</option>
+            <option value="weekly">weekly</option>
           </select>
+          {repeat === "none" && (
+            <>
+              <input
+                className="input"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+              <select
+                className="input"
+                value={early}
+                title="Heads-up before it's due"
+                onChange={(e) => setEarly(Number(e.target.value))}
+              >
+                {EARLY_CHOICES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}m
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          <button className="btn" disabled={!text.trim()} onClick={add}>
+            {IC.plus}
+          </button>
         </div>
-      )}
+      </div>
+
       <div className="todo-list">
-        {pending.length === 0 && <p className="todo-empty">Nothing scheduled.</p>}
-        {pending.map((t) => {
-          const overdue = t.dueAt != null && new Date(t.dueAt).getTime() < Date.now();
-          return (
-            <div key={t.id} className={`todo-item ${overdue ? "overdue" : ""}`}>
-              <button
-                className="btn ghost icon todo-check"
-                title="Mark done"
-                onClick={() => dispatch({ type: "todo/update", todo: { ...t, done: true } })}
-              >
-                {IC.check}
-              </button>
-              <div className="todo-body">
-                <span className="todo-text">{t.text}</span>
-                {t.dueAt && (
-                  <span className="todo-due">
-                    {IC.clock} {fmtDue(t.dueAt)}
-                  </span>
-                )}
-              </div>
-              <button
-                className="btn ghost icon danger"
-                title="Delete"
-                onClick={() => dispatch({ type: "todo/delete", id: t.id })}
-              >
-                {IC.close}
-              </button>
-            </div>
-          );
-        })}
+        <div className="todo-section-label">{prettyDay(selected, today)}</div>
+        {dayTodos.length === 0 && <p className="todo-empty">Nothing scheduled.</p>}
+        {dayTodos.map((t) => (
+          <TodoRow
+            key={t.id}
+            todo={t}
+            timeLabel={new Date(t.dueAt!).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            onDone={() => complete(t)}
+            onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+          />
+        ))}
+
+        {recurring.length > 0 && (
+          <>
+            <div className="todo-section-label">{IC.refresh} Repeating</div>
+            {recurring.map((t) => (
+              <TodoRow
+                key={t.id}
+                todo={t}
+                timeLabel={t.recurrence}
+                onDone={() => complete(t)}
+                onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function TodoRow({
+  todo,
+  timeLabel,
+  onDone,
+  onDelete,
+}: {
+  todo: Todo;
+  timeLabel: string;
+  onDone: () => void;
+  onDelete: () => void;
+}) {
+  const overdue =
+    todo.recurrence === "none" &&
+    todo.dueAt != null &&
+    !todo.done &&
+    new Date(todo.dueAt).getTime() < Date.now();
+
+  return (
+    <div className={`todo-item ${overdue ? "overdue" : ""} ${todo.done ? "done" : ""}`}>
+      <button
+        className={`check-box ${todo.done ? "checked" : ""}`}
+        title={todo.done ? "Done" : "Mark done"}
+        onClick={onDone}
+      >
+        {todo.done ? IC.check : null}
+      </button>
+      <div className="todo-body">
+        <span className="todo-text">{todo.text}</span>
+        <span className="todo-due">
+          {IC.clock} {timeLabel}
+        </span>
+      </div>
+      <button className="btn ghost icon danger" title="Delete" onClick={onDelete}>
+        {IC.close}
+      </button>
+    </div>
+  );
+}
+
+/** Array of 42 cells (6 weeks) — null for padding, else a YYYY-MM-DD key. */
+function buildMonthGrid(year: number, month: number): (string | null)[] {
+  const first = new Date(year, month, 1);
+  const startPad = first.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < startPad; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push(localDate(new Date(year, month, d)));
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
+function shiftMonth(v: { year: number; month: number }, delta: number) {
+  const d = new Date(v.year, v.month + delta, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function prettyDay(key: string, today: string): string {
+  if (key === today) return "Today";
+  const d = new Date(`${key}T00:00`);
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }

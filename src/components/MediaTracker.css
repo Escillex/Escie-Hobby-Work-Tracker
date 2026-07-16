@@ -203,6 +203,49 @@
   width: auto;
 }
 
+/* ---------- Installed / not-installed filter ---------- */
+
+.install-filter {
+  display: flex;
+  gap: 0.2rem;
+  margin-left: auto;
+  background: var(--glass-overlay);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.install-tab {
+  padding: 0.25rem 0.55rem;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--rp-subtle);
+  font-size: 0.76rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.install-tab:hover {
+  color: var(--rp-text);
+}
+
+.install-tab.active {
+  background: color-mix(in srgb, var(--rp-foam) 20%, var(--rp-overlay));
+  color: var(--rp-text);
+}
+
+.installed-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  background: var(--rp-foam);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--rp-foam) 60%, transparent);
+  vertical-align: middle;
+}
+
 /* ---------- Per-entry notes & checklist ---------- */
 
 .detail-btn {
@@ -249,32 +292,6 @@
   padding: 0.25rem 0.35rem;
   border-radius: var(--radius-sm);
   background: var(--glass-overlay);
-}
-
-.check-box {
-  width: 1.2rem;
-  height: 1.2rem;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1.5px solid var(--rp-highlight-high);
-  border-radius: 5px;
-  background: transparent;
-  color: var(--rp-base);
-  font-size: 0.7rem;
-  cursor: pointer;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
-}
-
-.check-box:hover {
-  border-color: var(--rp-foam);
-}
-
-.check-box.checked {
-  background: var(--rp-foam);
-  border-color: var(--rp-foam);
 }
 
 .detail-check .btn.icon {

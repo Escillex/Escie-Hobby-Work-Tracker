@@ -2,47 +2,151 @@
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.7rem;
   min-height: 0;
 }
 
-.clear-done {
-  margin-left: auto;
-  font-size: 0.72rem;
-  color: var(--rp-muted);
-  padding: 0.15rem 0.45rem;
-}
+/* ---------- Calendar ---------- */
 
-.todo-schedule {
-  display: grid;
-  grid-template-columns: 1fr auto;
+.cal {
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
 }
 
-.todo-schedule select {
-  width: auto;
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.cal-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--rp-subtle);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-dow {
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--rp-muted);
+  padding-bottom: 2px;
+}
+
+.cal-cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rp-text);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.cal-cell.empty {
+  cursor: default;
+}
+
+.cal-cell:not(.empty):hover {
+  background: var(--glass-overlay);
+}
+
+.cal-cell.today {
+  color: var(--rp-gold);
+  font-weight: 700;
+}
+
+.cal-cell.selected {
+  background: color-mix(in srgb, var(--rp-iris) 22%, var(--rp-overlay));
+  border-color: color-mix(in srgb, var(--rp-iris) 45%, transparent);
+}
+
+.cal-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rp-foam);
+}
+
+.cal-dot.pending {
+  background: var(--rp-foam);
+}
+.cal-dot.overdue {
+  background: var(--rp-love);
+}
+.cal-dot.done {
+  background: var(--rp-muted);
+}
+
+/* ---------- Add form ---------- */
+
+.todo-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.todo-add-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.todo-add-row .input {
+  width: auto;
+  flex: 1;
+  padding: 0.35rem 0.4rem;
+  font-size: 0.8rem;
+}
+
+.todo-add-row .btn {
+  flex-shrink: 0;
+}
+
+/* ---------- Lists ---------- */
 
 .todo-list {
   overflow-y: auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
+}
+
+.todo-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rp-subtle);
+  margin-top: 0.35rem;
 }
 
 .todo-empty {
   margin: 0;
   color: var(--rp-muted);
   font-size: 0.82rem;
-  text-align: center;
 }
 
 .todo-item {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.5rem;
+  padding: 0.35rem 0.45rem;
   border-radius: var(--radius-md);
   background: var(--glass-overlay);
   border: 1px solid transparent;
@@ -57,9 +161,9 @@
   border-left: 3px solid var(--rp-love);
 }
 
-.todo-check {
-  color: var(--rp-foam);
-  flex-shrink: 0;
+.todo-item.done .todo-text {
+  color: var(--rp-muted);
+  text-decoration: line-through;
 }
 
 .todo-body {
@@ -70,12 +174,12 @@
 }
 
 .todo-text {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   word-break: break-word;
 }
 
 .todo-due {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--rp-gold);
 }
 
