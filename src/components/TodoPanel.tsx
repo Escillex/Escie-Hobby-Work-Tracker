@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Recurrence, Todo } from "../lib/types";
+import type { Todo } from "../lib/types";
 import { uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { notify } from "../lib/notify";
 import { IC } from "../lib/icons";
 import "./TodoPanel.css";
+
+type TodoMode = "scheduled" | "someday" | "daily" | "weekly";
 
 const EARLY_CHOICES = [5, 15, 30, 60];
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -30,7 +32,7 @@ export function TodoPanel() {
   const [text, setText] = useState("");
   const [time, setTime] = useState("09:00");
   const [early, setEarly] = useState(30);
-  const [repeat, setRepeat] = useState<Recurrence>("none");
+  const [mode, setMode] = useState<TodoMode>("scheduled");
 
   // Notification scheduler for dated (one-off) todos.
   useEffect(() => {
@@ -55,6 +57,7 @@ export function TodoPanel() {
   }, [data.todos, dispatch]);
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
+  const someday = data.todos.filter((t) => t.recurrence === "none" && !t.dueAt);
   const recurring = data.todos.filter((t) => t.recurrence !== "none");
   const dayTodos = dated
     .filter((t) => dueDay(t.dueAt!) === selected)
@@ -79,10 +82,10 @@ export function TodoPanel() {
       text: t,
       createdAt: new Date().toISOString(),
       earlyMinutes: early,
-      recurrence: repeat,
+      recurrence: mode === "daily" || mode === "weekly" ? mode : "none",
       done: false,
       dueAt:
-        repeat === "none"
+        mode === "scheduled"
           ? new Date(`${selected}T${time || "09:00"}`).toISOString()
           : undefined,
     };
@@ -146,7 +149,11 @@ export function TodoPanel() {
         <input
           className="input"
           placeholder={
-            repeat === "none" ? `Add for ${prettyDay(selected, today)}…` : "Repeating task…"
+            mode === "scheduled"
+              ? `Add for ${prettyDay(selected, today)}…`
+              : mode === "someday"
+                ? "Someday / anytime task…"
+                : "Repeating task…"
           }
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -157,15 +164,16 @@ export function TodoPanel() {
         <div className="todo-add-row">
           <select
             className="input"
-            value={repeat}
-            onChange={(e) => setRepeat(e.target.value as Recurrence)}
-            title="Repeat"
+            value={mode}
+            onChange={(e) => setMode(e.target.value as TodoMode)}
+            title="When"
           >
-            <option value="none">once</option>
+            <option value="scheduled">scheduled</option>
+            <option value="someday">someday</option>
             <option value="daily">daily</option>
             <option value="weekly">weekly</option>
           </select>
-          {repeat === "none" && (
+          {mode === "scheduled" && (
             <>
               <input
                 className="input"
@@ -209,6 +217,20 @@ export function TodoPanel() {
           />
         ))}
 
+        {someday.length > 0 && (
+          <>
+            <div className="todo-section-label">Someday</div>
+            {someday.map((t) => (
+              <TodoRow
+                key={t.id}
+                todo={t}
+                onDone={() => complete(t)}
+                onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+              />
+            ))}
+          </>
+        )}
+
         {recurring.length > 0 && (
           <>
             <div className="todo-section-label">{IC.refresh} Repeating</div>
@@ -235,7 +257,7 @@ function TodoRow({
   onDelete,
 }: {
   todo: Todo;
-  timeLabel: string;
+  timeLabel?: string;
   onDone: () => void;
   onDelete: () => void;
 }) {
@@ -256,9 +278,11 @@ function TodoRow({
       </button>
       <div className="todo-body">
         <span className="todo-text">{todo.text}</span>
-        <span className="todo-due">
-          {IC.clock} {timeLabel}
-        </span>
+        {timeLabel && (
+          <span className="todo-due">
+            {IC.clock} {timeLabel}
+          </span>
+        )}
       </div>
       <button className="btn ghost icon danger" title="Delete" onClick={onDelete}>
         {IC.close}
