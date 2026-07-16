@@ -24,7 +24,7 @@ import {
 } from "../lib/tmdb";
 import { IC } from "../lib/icons";
 import { StarRating } from "./StarRating";
-import { EntryDetailModal, AddCategoryModal, EntryFormModal } from "./MediaModals";
+import { EntryDetailModal, AddCategoryModal, EntryFormModal, ManageCategoryModal } from "./MediaModals";
 import "./MediaTracker.css";
 
 export function MediaTracker() {
@@ -32,10 +32,12 @@ export function MediaTracker() {
   const categories = data.media.categories;
   const [activeId, setActiveId] = useState(categories[0]?.id);
   const [addingCategory, setAddingCategory] = useState(false);
+  const [managingId, setManagingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const active =
     categories.find((c) => c.id === activeId) ?? categories[0];
+  const managing = categories.find((c) => c.id === managingId) ?? null;
 
   useEffect(() => {
     if (!notice) return;
@@ -68,6 +70,13 @@ export function MediaTracker() {
         <button className="btn ghost icon" title="Add category" onClick={() => setAddingCategory(true)}>
           {IC.plus}
         </button>
+        <button
+          className="btn ghost icon"
+          title={`Manage ${active.name}`}
+          onClick={() => setManagingId(active.id)}
+        >
+          {IC.gear}
+        </button>
         {notice && <span className="media-notice">{notice}</span>}
       </div>
 
@@ -81,6 +90,22 @@ export function MediaTracker() {
             dispatch({ type: "category/add", category });
             setActiveId(category.id);
             setAddingCategory(false);
+          }}
+        />
+      )}
+
+      {managing && (
+        <ManageCategoryModal
+          category={managing}
+          onClose={() => setManagingId(null)}
+          onSave={(c) => {
+            dispatch({ type: "category/update", category: c });
+            setManagingId(null);
+          }}
+          onDelete={() => {
+            dispatch({ type: "category/delete", id: managing.id });
+            if (activeId === managing.id) setActiveId(categories[0]?.id);
+            setManagingId(null);
           }}
         />
       )}

@@ -1,7 +1,13 @@
 import { useState } from "react";
 import type { ChecklistItem, MediaCategory, MediaEntry, Recurrence } from "../lib/types";
 import { uid, localDate } from "../lib/types";
-import { toggleChecklistItem, nextRecurrence, RECURRENCE_LABEL, statusesFor } from "../lib/media";
+import {
+  toggleChecklistItem,
+  nextRecurrence,
+  RECURRENCE_LABEL,
+  statusesFor,
+  canCustomizeStatuses,
+} from "../lib/media";
 import { useFocusActions } from "../lib/focus";
 import { setSeasonWatched } from "../lib/tmdb";
 import { IC } from "../lib/icons";
@@ -374,6 +380,145 @@ export function EntryFormModal({
       <div className="modal-actions">
         <button className="btn primary" disabled={!title.trim()} onClick={save}>
           {editing ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+export function ManageCategoryModal({
+  category,
+  onClose,
+  onSave,
+  onDelete,
+}: {
+  category: MediaCategory;
+  onClose: () => void;
+  onSave: (c: MediaCategory) => void;
+  onDelete: () => void;
+}) {
+  const editable = canCustomizeStatuses(category.source);
+  const deletable = category.source === "manual";
+  const [name, setName] = useState(category.name);
+  const [statuses, setStatuses] = useState<string[]>(statusesFor(category));
+  const [newStatus, setNewStatus] = useState("");
+
+  const rename = (i: number, value: string) =>
+    setStatuses((prev) => prev.map((s, idx) => (idx === i ? value : s)));
+  const remove = (i: number) =>
+    setStatuses((prev) => prev.filter((_, idx) => idx !== i));
+  const move = (i: number, dir: -1 | 1) =>
+    setStatuses((prev) => {
+      const j = i + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+      return copy;
+    });
+  const add = () => {
+    const v = newStatus.trim();
+    if (!v || statuses.includes(v)) return;
+    setStatuses((prev) => [...prev, v]);
+    setNewStatus("");
+  };
+
+  const save = () => {
+    const cleaned = statuses.map((s) => s.trim()).filter(Boolean);
+    onSave({
+      ...category,
+      name: name.trim() || category.name,
+      statuses: editable && cleaned.length ? cleaned : category.statuses,
+    });
+  };
+
+  return (
+    <Modal title="Manage category" onClose={onClose}>
+      <div className="field">
+        <label>Name</label>
+        <input
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label>Statuses</label>
+        {!editable && (
+          <p className="manage-note">
+            These statuses are fixed — they sync with AniList / TMDB.
+          </p>
+        )}
+        <div className="manage-status-list">
+          {statuses.map((s, i) => (
+            <div key={i} className="manage-status-row">
+              <input
+                className="input"
+                value={s}
+                disabled={!editable}
+                onChange={(e) => rename(i, e.target.value)}
+              />
+              {editable && (
+                <>
+                  <button
+                    className="btn ghost icon manage-up"
+                    title="Move up"
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                  >
+                    {IC.next}
+                  </button>
+                  <button
+                    className="btn ghost icon manage-down"
+                    title="Move down"
+                    disabled={i === statuses.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    {IC.next}
+                  </button>
+                  <button
+                    className="btn ghost icon danger"
+                    title="Remove"
+                    disabled={statuses.length <= 1}
+                    onClick={() => remove(i)}
+                  >
+                    {IC.close}
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+        {editable && (
+          <div className="manage-status-add">
+            <input
+              className="input"
+              placeholder="Add a status... (Enter)"
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") add();
+              }}
+            />
+            <button className="btn" disabled={!newStatus.trim()} onClick={add}>
+              {IC.plus} Add
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="modal-actions">
+        {deletable && (
+          <button
+            className="btn ghost danger"
+            onClick={() => {
+              if (confirm(`Delete category "${category.name}" and its entries?`))
+                onDelete();
+            }}
+          >
+            Delete category
+          </button>
+        )}
+        <button className="btn primary" onClick={save}>
+          Save
         </button>
       </div>
     </Modal>

@@ -532,6 +532,52 @@
   cursor: pointer;
 }
 
+.manage-note {
+  font-size: 0.8rem;
+  color: var(--rp-gold);
+  margin: 0 0 0.4rem;
+}
+
+.manage-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.manage-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.manage-status-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-status-row .btn.icon {
+  flex-shrink: 0;
+}
+
+.manage-status-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.manage-status-add .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-up {
+  transform: rotate(-90deg);
+}
+
+.manage-down {
+  transform: rotate(90deg);
+}
+
 .entry-form-check input {
   width: auto;
 }
