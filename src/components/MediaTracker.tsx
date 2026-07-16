@@ -215,6 +215,13 @@ function CategoryView({
     }
   };
 
+  const toggleTask = (entry: MediaEntry, itemId: string) => {
+    const checklist = (entry.checklist ?? []).map((c) =>
+      c.id === itemId ? { ...c, done: !c.done } : c,
+    );
+    dispatch({ type: "media/update", entry: { ...entry, checklist } });
+  };
+
   const rate = async (entry: MediaEntry, score: number | undefined) => {
     dispatch({ type: "media/update", entry: { ...entry, score } });
     if (isAniList && token && entry.anilistId) {
@@ -330,6 +337,7 @@ function CategoryView({
             onLaunch={() => launch(e)}
             onStatus={(s) => setStatus(e, s)}
             onRate={(score) => rate(e, score)}
+            onToggleTask={(itemId) => toggleTask(e, itemId)}
             onDetails={() => setDetailId(e.id)}
             onDelete={() => dispatch({ type: "media/delete", id: e.id })}
           />
@@ -514,6 +522,7 @@ function MediaCard({
   onLaunch,
   onStatus,
   onRate,
+  onToggleTask,
   onDetails,
   onDelete,
 }: {
@@ -525,28 +534,31 @@ function MediaCard({
   onLaunch: () => void;
   onStatus: (s: MediaStatus) => void;
   onRate: (score: number | undefined) => void;
+  onToggleTask: (itemId: string) => void;
   onDetails: () => void;
   onDelete: () => void;
 }) {
-  const openTasks = entry.checklist?.filter((c) => !c.done).length ?? 0;
+  const open = entry.checklist?.filter((c) => !c.done) ?? [];
+  const openTasks = open.length;
   const hasNotes = Boolean(entry.notes?.trim());
   const annotated = hasNotes || (entry.checklist?.length ?? 0) > 0;
 
   return (
     <div className={`media-card status-${entry.status.toLowerCase()}`}>
-      {entry.coverUrl ? (
-        <img
-          className="media-cover"
-          src={entry.coverUrl}
-          alt=""
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.visibility = "hidden";
-          }}
-        />
-      ) : (
-        <div className="media-cover placeholder">{entry.title.slice(0, 1)}</div>
-      )}
+      <div className="media-card-main">
+        {entry.coverUrl ? (
+          <img
+            className="media-cover"
+            src={entry.coverUrl}
+            alt=""
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.visibility = "hidden";
+            }}
+          />
+        ) : (
+          <div className="media-cover placeholder">{entry.title.slice(0, 1)}</div>
+        )}
       <div className="media-info">
         <span className="media-title" title={entry.title}>
           {installed && <span className="installed-dot" title="Installed" />}
@@ -598,6 +610,27 @@ function MediaCard({
           </button>
         </div>
       </div>
+      </div>
+      {openTasks > 0 && (
+        <div className="media-tasks-preview">
+          {open.slice(0, 3).map((c) => (
+            <button
+              key={c.id}
+              className="media-task-line"
+              title="Mark done"
+              onClick={() => onToggleTask(c.id)}
+            >
+              <span className="check-box" />
+              <span className="media-task-text">{c.text}</span>
+            </button>
+          ))}
+          {openTasks > 3 && (
+            <button className="media-task-more" onClick={onDetails}>
+              +{openTasks - 3} more
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
