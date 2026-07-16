@@ -138,6 +138,21 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         />
       </div>
 
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>Movies &amp; TV</div>
+      <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--rp-subtle)" }}>
+        Free key from themoviedb.org/settings/api — enables searching movies and
+        shows with posters and per-season episode counts.
+      </p>
+      <div className="field">
+        <label>TMDB API key</label>
+        <input
+          className="input"
+          type="password"
+          defaultValue={s.tmdbApiKey ?? ""}
+          onBlur={(e) => set({ tmdbApiKey: e.target.value.trim() || undefined })}
+        />
+      </div>
+
       <div className="panel-title" style={{ marginTop: "0.5rem" }}>Obsidian</div>
       <div className="field">
         <label>Vault folder</label>

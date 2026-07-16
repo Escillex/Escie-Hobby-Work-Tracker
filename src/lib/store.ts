@@ -44,6 +44,25 @@ function migrate(data: AppData): AppData {
   if (!next.notes) {
     next = { ...next, notes: [] };
   }
+  // Movies/TV moved from manual entry to TMDB-backed search.
+  const needsTmdb = next.media.categories.some(
+    (c) => (c.id === "movies" || c.id === "tv") && c.source === "manual",
+  );
+  if (needsTmdb) {
+    next = {
+      ...next,
+      media: {
+        ...next.media,
+        categories: next.media.categories.map((c) => {
+          if (c.id === "movies" && c.source === "manual")
+            return { ...c, source: "tmdb-movie" as const };
+          if (c.id === "tv" && c.source === "manual")
+            return { ...c, source: "tmdb-tv" as const };
+          return c;
+        }),
+      },
+    };
+  }
   // The dopamine menu was removed; drop its stale key from old data files.
   if ("dopamine" in next) {
     const copy = { ...next };

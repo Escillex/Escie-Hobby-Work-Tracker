@@ -19,7 +19,8 @@
         { "url": "https://graphql.anilist.co/*" },
         { "url": "https://github-contributions-api.jogruber.de/*" },
         { "url": "https://store.steampowered.com/*" },
-        { "url": "https://api.steampowered.com/*" }
+        { "url": "https://api.steampowered.com/*" },
+        { "url": "https://api.themoviedb.org/*" }
       ]
     }
   ]

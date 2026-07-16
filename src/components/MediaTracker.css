@@ -325,3 +325,62 @@
   gap: 0.4rem;
   margin-top: 0.15rem;
 }
+
+/* ---------- Per-season TV controls ---------- */
+
+.detail-seasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.season-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--glass-overlay);
+}
+
+.season-row.done {
+  border-left: 3px solid var(--rp-foam);
+}
+
+.season-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.88rem;
+}
+
+.season-row.done .season-name {
+  color: var(--rp-subtle);
+}
+
+.season-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.season-controls .btn.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.season-count {
+  min-width: 3.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  color: var(--rp-subtle);
+}
+
+.season-done {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+}

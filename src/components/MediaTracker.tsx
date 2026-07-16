@@ -12,6 +12,13 @@ import {
   installedSteamAppIds,
   type GameResult,
 } from "../lib/games";
+import {
+  tmdbSearch,
+  tmdbTvSeasons,
+  bumpCurrentSeason,
+  setSeasonWatched,
+  type TmdbResult,
+} from "../lib/tmdb";
 import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
 import "./MediaTracker.css";
@@ -89,6 +96,9 @@ function CategoryView({
   const { data, dispatch } = useApp();
   const isAniList = category.source === "anilist-anime" || category.source === "anilist-manga";
   const isGames = category.source === "games";
+  const isMovie = category.source === "tmdb-movie";
+  const isTv = category.source === "tmdb-tv";
+  const isTmdb = isMovie || isTv;
   const aniType = category.source === "anilist-anime" ? "ANIME" : "MANGA";
   const token = data.settings.anilistToken;
   const [syncing, setSyncing] = useState(false);
@@ -148,6 +158,10 @@ function CategoryView({
   };
 
   const bump = async (entry: MediaEntry) => {
+    if (entry.seasons?.length) {
+      dispatch({ type: "media/update", entry: bumpCurrentSeason(entry) });
+      return;
+    }
     const progress = entry.progress + 1;
     const completed = entry.total != null && progress >= entry.total;
     const status: MediaStatus = completed ? "COMPLETED" : entry.status;
@@ -234,7 +248,15 @@ function CategoryView({
             </div>
           </>
         )}
-        {!isAniList && !isGames && (
+        {isTmdb && (
+          <>
+            <TmdbSearch category={category} type={isMovie ? "movie" : "tv"} onNotice={onNotice} />
+            <button className="btn" onClick={() => setAddingManual(true)}>
+              {IC.plus} Add
+            </button>
+          </>
+        )}
+        {!isAniList && !isGames && !isTmdb && (
           <button className="btn" onClick={() => setAddingManual(true)}>
             {IC.plus} Add {category.name.replace(/s$/, "").toLowerCase()}
           </button>
@@ -250,7 +272,9 @@ function CategoryView({
                 ? entries.length > 0
                   ? "No games match this filter."
                   : "Search games, import your Steam library, or add one manually."
-                : "Nothing here yet — add your first one."}
+                : isTmdb
+                  ? `Search for a ${isMovie ? "movie" : "show"} above, or add one manually.`
+                  : "Nothing here yet — add your first one."}
           </p>
         )}
         {[...current, ...rest].map((e) => (
@@ -258,6 +282,7 @@ function CategoryView({
             key={e.id}
             entry={e}
             hoursMode={isGames}
+            movie={isMovie}
             installed={isGames ? isInstalled(e) : undefined}
             onBump={() => bump(e)}
             onLaunch={() => launch(e)}
@@ -324,6 +349,55 @@ function EntryDetailModal({
 
   return (
     <Modal title={entry.title} onClose={onClose}>
+      {entry.seasons?.length ? (
+        <div className="field">
+          <label>
+            Seasons ({entry.progress}/{entry.total} episodes)
+          </label>
+          <div className="detail-seasons">
+            {entry.seasons.map((s) => {
+              const full = s.watched >= s.episodes;
+              return (
+                <div key={s.season} className={`season-row ${full ? "done" : ""}`}>
+                  <span className="season-name" title={s.name}>
+                    {s.name}
+                  </span>
+                  <div className="season-controls">
+                    <button
+                      className="btn ghost icon"
+                      title="One fewer"
+                      disabled={s.watched <= 0}
+                      onClick={() => onUpdate(setSeasonWatched(entry, s.season, s.watched - 1))}
+                    >
+                      −
+                    </button>
+                    <span className="season-count">
+                      {s.watched}/{s.episodes}
+                    </span>
+                    <button
+                      className="btn ghost icon"
+                      title="One more"
+                      disabled={full}
+                      onClick={() => onUpdate(setSeasonWatched(entry, s.season, s.watched + 1))}
+                    >
+                      +
+                    </button>
+                    <button
+                      className="btn ghost season-done"
+                      title={full ? "Clear season" : "Mark season watched"}
+                      onClick={() =>
+                        onUpdate(setSeasonWatched(entry, s.season, full ? 0 : s.episodes))
+                      }
+                    >
+                      {full ? "clear" : "all"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="field">
         <label>Notes</label>
         <textarea
@@ -384,6 +458,7 @@ function EntryDetailModal({
 function MediaCard({
   entry,
   hoursMode,
+  movie,
   installed,
   onBump,
   onLaunch,
@@ -393,6 +468,7 @@ function MediaCard({
 }: {
   entry: MediaEntry;
   hoursMode: boolean;
+  movie?: boolean;
   installed?: boolean;
   onBump: () => void;
   onLaunch: () => void;
@@ -425,12 +501,14 @@ function MediaCard({
           {entry.title}
         </span>
         <div className="media-progress">
-          <span>
-            {entry.progress}
-            {entry.total != null ? ` / ${entry.total}` : hoursMode ? " h" : ""}
-          </span>
-          {!hoursMode && entry.status !== "COMPLETED" && (
-            <button className="btn icon bump" title="+1" onClick={onBump}>
+          {!movie && (
+            <span>
+              {entry.progress}
+              {entry.total != null ? ` / ${entry.total}` : hoursMode ? " h" : ""}
+            </span>
+          )}
+          {!movie && !hoursMode && entry.status !== "COMPLETED" && (
+            <button className="btn icon bump" title="+1 episode" onClick={onBump}>
               +1
             </button>
           )}
@@ -619,6 +697,97 @@ function GameSearchBox({
             <button key={g.appid} className="ani-result" onMouseDown={() => add(g)}>
               {g.thumb && <img src={g.thumb} alt="" loading="lazy" />}
               <span>{g.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TmdbSearch({
+  category,
+  type,
+  onNotice,
+}: {
+  category: MediaCategory;
+  type: "movie" | "tv";
+  onNotice: (msg: string) => void;
+}) {
+  const { data, dispatch } = useApp();
+  const apiKey = data.settings.tmdbApiKey;
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<TmdbResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const debounce = useRef<number>(undefined);
+
+  useEffect(() => {
+    window.clearTimeout(debounce.current);
+    if (!apiKey || query.trim().length < 2) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+    debounce.current = window.setTimeout(async () => {
+      try {
+        const found = await tmdbSearch(apiKey, query.trim(), type);
+        setResults(found);
+        setOpen(true);
+      } catch (e) {
+        onNotice(`${e}`);
+      }
+    }, 350);
+    return () => window.clearTimeout(debounce.current);
+  }, [query, apiKey, type, onNotice]);
+
+  const add = async (r: TmdbResult) => {
+    setOpen(false);
+    setQuery("");
+    const base: MediaEntry = {
+      id: uid(),
+      categoryId: category.id,
+      title: r.title,
+      coverUrl: r.poster,
+      progress: 0,
+      total: type === "movie" ? null : 0,
+      status: "PLANNING",
+      tmdbId: r.id,
+      tmdbType: type,
+    };
+    if (type === "movie") {
+      dispatch({ type: "media/add", entry: base });
+      return;
+    }
+    try {
+      const seasons = await tmdbTvSeasons(apiKey!, r.id);
+      const total = seasons.reduce((n, s) => n + s.episodes, 0);
+      dispatch({ type: "media/add", entry: { ...base, seasons, total } });
+    } catch (e) {
+      dispatch({ type: "media/add", entry: base });
+      onNotice(`Added without seasons: ${e}`);
+    }
+  };
+
+  return (
+    <div className="ani-search">
+      <input
+        className="input"
+        placeholder={apiKey ? `Search ${type === "movie" ? "movies" : "shows"}…` : "Add a TMDB key in settings to search"}
+        disabled={!apiKey}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => results.length && setOpen(true)}
+      />
+      {open && results.length > 0 && (
+        <div className="ani-results glass">
+          {results.map((r) => (
+            <button key={r.id} className="ani-result" onMouseDown={() => add(r)}>
+              {r.poster && <img src={r.poster} alt="" loading="lazy" />}
+              <span>
+                {r.title}
+                {r.year ? ` (${r.year})` : ""}
+              </span>
             </button>
           ))}
         </div>

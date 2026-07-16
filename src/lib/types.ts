@@ -26,7 +26,13 @@ export interface Impulse {
   status: ImpulseStatus;
 }
 
-export type CategorySource = "anilist-anime" | "anilist-manga" | "games" | "manual";
+export type CategorySource =
+  | "anilist-anime"
+  | "anilist-manga"
+  | "games"
+  | "tmdb-movie"
+  | "tmdb-tv"
+  | "manual";
 
 export interface MediaCategory {
   id: string;
@@ -57,6 +63,13 @@ export interface ChecklistItem {
   done: boolean;
 }
 
+export interface SeasonProgress {
+  season: number;
+  name: string;
+  episodes: number;
+  watched: number;
+}
+
 export interface MediaEntry {
   id: string;
   categoryId: string;
@@ -71,6 +84,9 @@ export interface MediaEntry {
   anilistMediaListId?: number;
   steamAppId?: number;
   launchCommand?: string;
+  tmdbId?: number;
+  tmdbType?: "movie" | "tv";
+  seasons?: SeasonProgress[];
   notes?: string;
   checklist?: ChecklistItem[];
 }
@@ -110,6 +126,7 @@ export interface Settings {
   githubUser: string;
   steamApiKey?: string;
   steamId?: string;
+  tmdbApiKey?: string;
   vaultPath?: string;
   vaultInboxNote?: string;
   fontFamily?: string;
@@ -148,8 +165,8 @@ export function defaultData(): AppData {
       categories: [
         { id: "anime", name: "Anime", source: "anilist-anime" },
         { id: "manga", name: "Manga", source: "anilist-manga" },
-        { id: "movies", name: "Movies", source: "manual" },
-        { id: "tv", name: "TV Shows", source: "manual" },
+        { id: "movies", name: "Movies", source: "tmdb-movie" },
+        { id: "tv", name: "TV Shows", source: "tmdb-tv" },
         { id: "games", name: "Games", source: "games" },
       ],
       entries: [],
