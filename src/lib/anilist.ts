@@ -130,14 +130,15 @@ export async function fetchList(
   }));
 }
 
-/** Create or update a list entry on AniList; returns the media-list id. */
+/** Create or update a list entry on AniList; returns the media-list id.
+ *  `scoreRaw` is 0-100 (format-independent), so a 0-10 app rating maps as x10. */
 export async function saveEntry(
   token: string,
-  args: { mediaId: number; status?: MediaStatus; progress?: number },
+  args: { mediaId: number; status?: MediaStatus; progress?: number; scoreRaw?: number },
 ): Promise<number> {
   const data = await gql<{ SaveMediaListEntry: { id: number } }>(
-    `mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int) {
-      SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress) {
+    `mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int, $scoreRaw: Int) {
+      SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress, scoreRaw: $scoreRaw) {
         id
       }
     }`,

@@ -190,6 +190,10 @@
   color: var(--rp-foam);
 }
 
+.media-rating {
+  margin-top: 0.15rem;
+}
+
 .media-foot {
   display: flex;
   align-items: center;

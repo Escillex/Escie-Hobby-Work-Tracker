@@ -3,6 +3,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useApp } from "../lib/state";
 import { authUrl, fetchViewer } from "../lib/anilist";
+import { tmdbCreateRequestToken, tmdbApproveUrl, tmdbCreateSession } from "../lib/tmdb";
 import { Modal } from "./Modal";
 
 const FONT_CANDIDATES = [
@@ -31,6 +32,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [clientId, setClientId] = useState("");
   const [token, setToken] = useState(s.anilistToken ?? "");
   const [status, setStatus] = useState<string | null>(null);
+  const [tmdbToken, setTmdbToken] = useState<string | null>(null);
+  const [tmdbStatus, setTmdbStatus] = useState<string | null>(null);
 
   const set = (patch: Partial<typeof s>) =>
     dispatch({ type: "settings/update", settings: patch });
@@ -50,6 +53,33 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       setStatus(`Connected as ${viewer.name}`);
     } catch (e) {
       setStatus(`Failed: ${e}`);
+    }
+  };
+
+  const tmdbAuthorize = async () => {
+    if (!s.tmdbApiKey) {
+      setTmdbStatus("Enter a TMDB API key first");
+      return;
+    }
+    try {
+      const rt = await tmdbCreateRequestToken(s.tmdbApiKey);
+      setTmdbToken(rt);
+      await openUrl(tmdbApproveUrl(rt));
+      setTmdbStatus("Approve in the browser, then click Connect");
+    } catch (e) {
+      setTmdbStatus(`${e}`);
+    }
+  };
+
+  const tmdbConnect = async () => {
+    if (!s.tmdbApiKey || !tmdbToken) return;
+    setTmdbStatus("Connecting…");
+    try {
+      const { sessionId, accountId, username } = await tmdbCreateSession(s.tmdbApiKey, tmdbToken);
+      set({ tmdbSessionId: sessionId, tmdbAccountId: accountId, tmdbUsername: username });
+      setTmdbStatus(`Connected as ${username}`);
+    } catch (e) {
+      setTmdbStatus(`${e}`);
     }
   };
 
@@ -140,8 +170,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
       <div className="panel-title" style={{ marginTop: "0.5rem" }}>Movies &amp; TV</div>
       <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--rp-subtle)" }}>
-        Free key from themoviedb.org/settings/api — enables searching movies and
-        shows with posters and per-season episode counts.
+        Free key from themoviedb.org/settings/api enables search. Connecting your
+        account (below) syncs ratings and your rated/watchlist items.
       </p>
       <div className="field">
         <label>TMDB API key</label>
@@ -152,6 +182,22 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onBlur={(e) => set({ tmdbApiKey: e.target.value.trim() || undefined })}
         />
       </div>
+      {s.tmdbUsername ? (
+        <p style={{ margin: 0, color: "var(--rp-foam)" }}>Connected as {s.tmdbUsername}</p>
+      ) : (
+        <div className="field">
+          <label>Connect account (for rating sync)</label>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn" disabled={!s.tmdbApiKey} onClick={tmdbAuthorize}>
+              Authorize
+            </button>
+            <button className="btn primary" disabled={!tmdbToken} onClick={tmdbConnect}>
+              Connect
+            </button>
+          </div>
+        </div>
+      )}
+      {tmdbStatus && <p style={{ margin: 0, fontSize: "0.82rem" }}>{tmdbStatus}</p>}
 
       <div className="panel-title" style={{ marginTop: "0.5rem" }}>Obsidian</div>
       <div className="field">

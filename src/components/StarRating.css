@@ -1,0 +1,65 @@
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.stars.md {
+  font-size: 1.25rem;
+}
+
+.stars.sm {
+  font-size: 0.9rem;
+}
+
+.star {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+  color: var(--rp-highlight-high);
+}
+
+.star-glyph {
+  display: block;
+}
+
+/* Half / full fills via a clipped gold overlay. */
+.star.half .star-glyph,
+.star.full .star-glyph {
+  background: linear-gradient(90deg, var(--rp-gold) 50%, var(--rp-highlight-high) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.star.full .star-glyph {
+  background: var(--rp-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stars.interactive .star-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.star-hit.left {
+  left: 0;
+}
+.star-hit.right {
+  right: 0;
+}
+
+.stars-value {
+  margin-left: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--rp-gold);
+  font-family: var(--app-font);
+}

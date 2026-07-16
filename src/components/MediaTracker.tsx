@@ -15,12 +15,15 @@ import {
 import {
   tmdbSearch,
   tmdbTvSeasons,
+  tmdbRate,
+  tmdbSyncPull,
   bumpCurrentSeason,
   setSeasonWatched,
   type TmdbResult,
 } from "../lib/tmdb";
 import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
+import { StarRating } from "./StarRating";
 import "./MediaTracker.css";
 
 export function MediaTracker() {
@@ -195,6 +198,40 @@ function CategoryView({
     }
   };
 
+  const tmdbSync = async () => {
+    if (!data.settings.tmdbSessionId) {
+      onNotice("Connect TMDB in settings first");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const fresh = await tmdbSyncPull(data.settings, isMovie ? "movie" : "tv", category.id);
+      dispatch({ type: "media/replaceCategory", categoryId: category.id, entries: fresh });
+      onNotice(`Synced ${fresh.length} from TMDB`);
+    } catch (e) {
+      onNotice(`${e}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const rate = async (entry: MediaEntry, score: number | undefined) => {
+    dispatch({ type: "media/update", entry: { ...entry, score } });
+    if (isAniList && token && entry.anilistId) {
+      try {
+        await saveEntry(token, { mediaId: entry.anilistId, scoreRaw: (score ?? 0) * 10 });
+      } catch (e) {
+        onNotice(`AniList rating push failed: ${e}`);
+      }
+    } else if (isTmdb && entry.tmdbId && entry.tmdbType) {
+      try {
+        await tmdbRate(data.settings, entry.tmdbType, entry.tmdbId, score);
+      } catch (e) {
+        onNotice(`${e}`);
+      }
+    }
+  };
+
   const isInstalled = (e: MediaEntry) =>
     e.steamAppId != null && (installed?.has(e.steamAppId) ?? false);
 
@@ -251,6 +288,11 @@ function CategoryView({
         {isTmdb && (
           <>
             <TmdbSearch category={category} type={isMovie ? "movie" : "tv"} onNotice={onNotice} />
+            {data.settings.tmdbSessionId && (
+              <button className="btn" onClick={tmdbSync} disabled={syncing} title="Pull rated + watchlist from TMDB">
+                {IC.refresh} {syncing ? "Syncing…" : "Sync"}
+              </button>
+            )}
             <button className="btn" onClick={() => setAddingManual(true)}>
               {IC.plus} Add
             </button>
@@ -287,6 +329,7 @@ function CategoryView({
             onBump={() => bump(e)}
             onLaunch={() => launch(e)}
             onStatus={(s) => setStatus(e, s)}
+            onRate={(score) => rate(e, score)}
             onDetails={() => setDetailId(e.id)}
             onDelete={() => dispatch({ type: "media/delete", id: e.id })}
           />
@@ -310,6 +353,7 @@ function CategoryView({
           entry={detailEntry}
           onClose={() => setDetailId(null)}
           onUpdate={(entry) => dispatch({ type: "media/update", entry })}
+          onRate={(score) => rate(detailEntry, score)}
         />
       )}
     </div>
@@ -320,10 +364,12 @@ function EntryDetailModal({
   entry,
   onClose,
   onUpdate,
+  onRate,
 }: {
   entry: MediaEntry;
   onClose: () => void;
   onUpdate: (e: MediaEntry) => void;
+  onRate: (score: number | undefined) => void;
 }) {
   const [newItem, setNewItem] = useState("");
   const checklist = entry.checklist ?? [];
@@ -349,6 +395,10 @@ function EntryDetailModal({
 
   return (
     <Modal title={entry.title} onClose={onClose}>
+      <div className="field">
+        <label>Your rating</label>
+        <StarRating value={entry.score} onChange={onRate} />
+      </div>
       {entry.seasons?.length ? (
         <div className="field">
           <label>
@@ -463,6 +513,7 @@ function MediaCard({
   onBump,
   onLaunch,
   onStatus,
+  onRate,
   onDetails,
   onDelete,
 }: {
@@ -473,6 +524,7 @@ function MediaCard({
   onBump: () => void;
   onLaunch: () => void;
   onStatus: (s: MediaStatus) => void;
+  onRate: (score: number | undefined) => void;
   onDetails: () => void;
   onDelete: () => void;
 }) {
@@ -517,6 +569,9 @@ function MediaCard({
               {IC.play}
             </button>
           )}
+        </div>
+        <div className="media-rating">
+          <StarRating value={entry.score} onChange={onRate} size="sm" />
         </div>
         <div className="media-foot">
           <select

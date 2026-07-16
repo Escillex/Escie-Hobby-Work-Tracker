@@ -127,6 +127,9 @@ export interface Settings {
   steamApiKey?: string;
   steamId?: string;
   tmdbApiKey?: string;
+  tmdbSessionId?: string;
+  tmdbAccountId?: number;
+  tmdbUsername?: string;
   vaultPath?: string;
   vaultInboxNote?: string;
   fontFamily?: string;

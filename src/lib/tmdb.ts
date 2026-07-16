@@ -1,5 +1,6 @@
 import { fetch } from "@tauri-apps/plugin-http";
-import type { MediaEntry, SeasonProgress } from "./types";
+import type { MediaEntry, SeasonProgress, Settings } from "./types";
+import { uid } from "./types";
 
 const API = "https://api.themoviedb.org/3";
 
@@ -104,4 +105,126 @@ export function bumpCurrentSeason(entry: MediaEntry): MediaEntry {
   const target = seasons.find((s) => s.watched < s.episodes);
   if (!target) return entry;
   return setSeasonWatched(entry, target.season, target.watched + 1);
+}
+
+/* ---------- Account sync (session-based v3 auth) ---------- */
+
+/** Step 1: request a token to authorize. */
+export async function tmdbCreateRequestToken(apiKey: string): Promise<string> {
+  const res = await fetch(`${API}/authentication/token/new?api_key=${encodeURIComponent(apiKey)}`);
+  const json = await res.json();
+  if (!res.ok || !json.request_token) throw new Error("Could not start TMDB auth — check your key");
+  return json.request_token;
+}
+
+/** Step 2: the URL the user opens to approve the token in a browser. */
+export const tmdbApproveUrl = (requestToken: string) =>
+  `https://www.themoviedb.org/authenticate/${requestToken}`;
+
+/** Step 3: exchange an approved token for a session id + account info. */
+export async function tmdbCreateSession(
+  apiKey: string,
+  requestToken: string,
+): Promise<{ sessionId: string; accountId: number; username: string }> {
+  const s = await fetch(
+    `${API}/authentication/session/new?api_key=${encodeURIComponent(apiKey)}&request_token=${encodeURIComponent(requestToken)}`,
+  );
+  const sJson = await s.json();
+  if (!s.ok || !sJson.session_id)
+    throw new Error("Approve the token in your browser first, then Connect");
+  const sessionId: string = sJson.session_id;
+  const a = await fetch(
+    `${API}/account?api_key=${encodeURIComponent(apiKey)}&session_id=${encodeURIComponent(sessionId)}`,
+  );
+  const aJson = await a.json();
+  return { sessionId, accountId: aJson.id, username: aJson.username };
+}
+
+/** Push (or clear, when score is undefined) a rating to TMDB. */
+export async function tmdbRate(
+  settings: Settings,
+  type: "movie" | "tv",
+  id: number,
+  score: number | undefined,
+): Promise<void> {
+  const { tmdbApiKey, tmdbSessionId } = settings;
+  if (!tmdbApiKey || !tmdbSessionId) throw new Error("Connect TMDB in settings to sync ratings");
+  const url = `${API}/${type}/${id}/rating?api_key=${encodeURIComponent(tmdbApiKey)}&session_id=${encodeURIComponent(tmdbSessionId)}`;
+  const res = await fetch(url, {
+    method: score == null ? "DELETE" : "POST",
+    headers: { "Content-Type": "application/json;charset=utf-8" },
+    body: score == null ? undefined : JSON.stringify({ value: Math.max(0.5, score) }),
+  });
+  if (!res.ok) throw new Error(`TMDB rating push failed (${res.status})`);
+}
+
+interface AccountItem {
+  id: number;
+  title?: string;
+  name?: string;
+  poster_path: string | null;
+  rating?: number;
+}
+
+async function fetchAllPages(baseUrl: string): Promise<AccountItem[]> {
+  const items: AccountItem[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const res = await fetch(`${baseUrl}&page=${page}`);
+    if (!res.ok) throw new Error(`TMDB sync failed (${res.status})`);
+    const json: { results: AccountItem[]; total_pages: number } = await res.json();
+    items.push(...json.results);
+    totalPages = json.total_pages;
+    page++;
+  } while (page <= totalPages && page <= 20);
+  return items;
+}
+
+/** Pull the user's rated + watchlist items for one media type into entries.
+ *  Rated items carry their score; watchlist-only items become PLANNING. */
+export async function tmdbSyncPull(
+  settings: Settings,
+  type: "movie" | "tv",
+  categoryId: string,
+): Promise<MediaEntry[]> {
+  const { tmdbApiKey, tmdbSessionId, tmdbAccountId } = settings;
+  if (!tmdbApiKey || !tmdbSessionId || tmdbAccountId == null)
+    throw new Error("Connect TMDB in settings first");
+  const key = `api_key=${encodeURIComponent(tmdbApiKey)}&session_id=${encodeURIComponent(tmdbSessionId)}`;
+  const plural = type === "movie" ? "movies" : "tv";
+  const [rated, watch] = await Promise.all([
+    fetchAllPages(`${API}/account/${tmdbAccountId}/rated/${plural}?${key}`),
+    fetchAllPages(`${API}/account/${tmdbAccountId}/watchlist/${plural}?${key}`),
+  ]);
+
+  const byId = new Map<number, { item: AccountItem; rated: boolean }>();
+  for (const item of watch) byId.set(item.id, { item, rated: false });
+  for (const item of rated) byId.set(item.id, { item, rated: true });
+
+  const entries = await Promise.all(
+    [...byId.values()].map(async ({ item, rated: isRated }) => {
+      const base: MediaEntry = {
+        id: uid(),
+        categoryId,
+        title: item.title ?? item.name ?? "Untitled",
+        coverUrl: tmdbImg(item.poster_path),
+        progress: 0,
+        total: type === "movie" ? null : 0,
+        status: isRated ? "COMPLETED" : "PLANNING",
+        score: item.rating,
+        tmdbId: item.id,
+        tmdbType: type,
+      };
+      if (type === "movie") return base;
+      try {
+        const seasons = await tmdbTvSeasons(tmdbApiKey, item.id);
+        const total = seasons.reduce((n, s) => n + s.episodes, 0);
+        return { ...base, seasons, total };
+      } catch {
+        return base;
+      }
+    }),
+  );
+  return entries;
 }
