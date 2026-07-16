@@ -61,6 +61,8 @@ export interface ChecklistItem {
   id: string;
   text: string;
   done: boolean;
+  recurrence?: Recurrence; // undefined/"none" = a one-off task
+  lastDone?: string; // YYYY-MM-DD a recurring item was last completed
 }
 
 export interface SeasonProgress {

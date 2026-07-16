@@ -103,22 +103,45 @@ function migrate(data: AppData): AppData {
   return next;
 }
 
+/** Whether a recurring item completed on `lastDone` is due to reappear. */
+function recurrenceStale(
+  recurrence: "daily" | "weekly",
+  lastDone: string | undefined,
+  today: string,
+): boolean {
+  if (lastDone === today) return false;
+  return recurrence === "daily"
+    ? true
+    : lastDone == null ||
+        (Date.now() - new Date(lastDone).getTime()) / 86_400_000 >= 7;
+}
+
 /** Re-open recurring tasks whose completion is stale (a new day for daily,
- *  seven-plus days for weekly), so habits reappear on schedule. */
+ *  seven-plus days for weekly), so habits reappear on schedule. Applies to
+ *  both scheduled todos and recurring checklist items on media entries. */
 function resetRecurring(data: AppData): AppData {
   const today = localDate();
   const todos = data.todos.map((t) => {
-    if (t.recurrence === "none" || !t.done || t.lastDone === today) return t;
-    const stale =
-      t.recurrence === "daily"
-        ? t.lastDone !== today
-        : t.lastDone == null ||
-          (Date.now() - new Date(t.lastDone).getTime()) / 86_400_000 >= 7;
-    return stale
+    if (t.recurrence === "none" || !t.done) return t;
+    return recurrenceStale(t.recurrence, t.lastDone, today)
       ? { ...t, done: false, notifiedEarly: false, notifiedDue: false }
       : t;
   });
-  return { ...data, todos };
+  const entries = data.media.entries.map((e) => {
+    if (!e.checklist?.some((c) => c.recurrence && c.recurrence !== "none" && c.done)) {
+      return e;
+    }
+    return {
+      ...e,
+      checklist: e.checklist.map((c) =>
+        c.recurrence && c.recurrence !== "none" && c.done &&
+        recurrenceStale(c.recurrence, c.lastDone, today)
+          ? { ...c, done: false }
+          : c,
+      ),
+    };
+  });
+  return { ...data, todos, media: { ...data.media, entries } };
 }
 
 export async function loadData(): Promise<AppData> {

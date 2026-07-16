@@ -264,6 +264,8 @@
 }
 
 .media-task-text {
+  flex: 1;
+  min-width: 0;
   font-size: 0.82rem;
   white-space: nowrap;
   overflow: hidden;
@@ -414,10 +416,36 @@
   opacity: 1;
 }
 
+.detail-check-repeat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--rp-iris);
+}
+
+.detail-check .btn.icon.repeat-on {
+  color: var(--rp-iris);
+  opacity: 1;
+}
+
 .detail-check-add {
   display: flex;
   gap: 0.4rem;
   margin-top: 0.15rem;
+}
+
+.detail-check-recur {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.media-task-repeat {
+  margin-left: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--rp-iris);
+  flex-shrink: 0;
 }
 
 /* ---------- Per-season TV controls ---------- */

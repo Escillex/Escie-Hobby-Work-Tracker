@@ -31,7 +31,16 @@ export function NowNextCard() {
           entry: {
             ...m,
             checklist: (m.checklist ?? []).map((c) =>
-              c.id === ref.id ? { ...c, done: true } : c,
+              c.id === ref.id
+                ? {
+                    ...c,
+                    done: true,
+                    lastDone:
+                      c.recurrence && c.recurrence !== "none"
+                        ? new Date().toISOString().slice(0, 10)
+                        : c.lastDone,
+                  }
+                : c,
             ),
           },
         });

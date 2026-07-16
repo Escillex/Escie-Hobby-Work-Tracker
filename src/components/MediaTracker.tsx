@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
+import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus, Recurrence } from "../lib/types";
 import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
@@ -26,6 +26,28 @@ import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
 import { StarRating } from "./StarRating";
 import "./MediaTracker.css";
+
+/** Toggle a checklist item, stamping the completion date for recurring ones
+ *  so the daily/weekly reset knows when it was last done. */
+function toggleChecklistItem(c: ChecklistItem): ChecklistItem {
+  const done = !c.done;
+  if (c.recurrence && c.recurrence !== "none") {
+    return { ...c, done, lastDone: done ? localDate() : undefined };
+  }
+  return { ...c, done };
+}
+
+/** Cycle a checklist item's repeat setting: none → daily → weekly → none. */
+function nextRecurrence(r: Recurrence | undefined): Recurrence | undefined {
+  if (r === "daily") return "weekly";
+  if (r === "weekly") return undefined;
+  return "daily";
+}
+
+const RECURRENCE_LABEL: Record<"daily" | "weekly", string> = {
+  daily: "daily",
+  weekly: "weekly",
+};
 
 export function MediaTracker() {
   const { data, dispatch } = useApp();
@@ -218,7 +240,7 @@ function CategoryView({
 
   const toggleTask = (entry: MediaEntry, itemId: string) => {
     const checklist = (entry.checklist ?? []).map((c) =>
-      c.id === itemId ? { ...c, done: !c.done } : c,
+      c.id === itemId ? toggleChecklistItem(c) : c,
     );
     dispatch({ type: "media/update", entry: { ...entry, checklist } });
   };
@@ -382,12 +404,18 @@ function EntryDetailModal({
 }) {
   const { focusNow, isFocused } = useFocusActions();
   const [newItem, setNewItem] = useState("");
+  const [newRecurrence, setNewRecurrence] = useState<Recurrence>("none");
   const checklist = entry.checklist ?? [];
 
   const addItem = () => {
     const text = newItem.trim();
     if (!text) return;
-    const item: ChecklistItem = { id: uid(), text, done: false };
+    const item: ChecklistItem = {
+      id: uid(),
+      text,
+      done: false,
+      recurrence: newRecurrence === "none" ? undefined : newRecurrence,
+    };
     onUpdate({ ...entry, checklist: [...checklist, item] });
     setNewItem("");
   };
@@ -395,7 +423,15 @@ function EntryDetailModal({
   const toggle = (id: string) =>
     onUpdate({
       ...entry,
-      checklist: checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
+      checklist: checklist.map((c) => (c.id === id ? toggleChecklistItem(c) : c)),
+    });
+
+  const cycleRecurrence = (id: string) =>
+    onUpdate({
+      ...entry,
+      checklist: checklist.map((c) =>
+        c.id === id ? { ...c, recurrence: nextRecurrence(c.recurrence) } : c,
+      ),
     });
 
   const remove = (id: string) =>
@@ -486,6 +522,24 @@ function EntryDetailModal({
                 {c.done ? IC.check : null}
               </button>
               <span className="detail-check-text">{c.text}</span>
+              {c.recurrence && c.recurrence !== "none" && (
+                <span className="detail-check-repeat">
+                  {IC.refresh} {RECURRENCE_LABEL[c.recurrence]}
+                </span>
+              )}
+              <button
+                className={`btn ghost icon ${
+                  c.recurrence && c.recurrence !== "none" ? "repeat-on" : ""
+                }`}
+                title={
+                  c.recurrence && c.recurrence !== "none"
+                    ? `Repeats ${RECURRENCE_LABEL[c.recurrence]} — click to change`
+                    : "Make this repeat"
+                }
+                onClick={() => cycleRecurrence(c.id)}
+              >
+                {IC.refresh}
+              </button>
               <button
                 className={`btn ghost icon ${
                   isFocused({ kind: "task", id: c.id, parentId: entry.id }) ? "focused" : ""
@@ -514,6 +568,16 @@ function EntryDetailModal({
                 if (e.key === "Enter") addItem();
               }}
             />
+            <select
+              className="input detail-check-recur"
+              value={newRecurrence}
+              title="Repeat"
+              onChange={(e) => setNewRecurrence(e.target.value as Recurrence)}
+            >
+              <option value="none">once</option>
+              <option value="daily">daily</option>
+              <option value="weekly">weekly</option>
+            </select>
             <button className="btn" disabled={!newItem.trim()} onClick={addItem}>
               {IC.plus}
             </button>
@@ -636,11 +700,16 @@ function MediaCard({
             <div key={c.id} className="media-task-line">
               <button
                 className="media-task-toggle"
-                title="Mark done"
+                title={c.recurrence && c.recurrence !== "none" ? `Mark done (repeats ${c.recurrence})` : "Mark done"}
                 onClick={() => onToggleTask(c.id)}
               >
                 <span className="check-box" />
                 <span className="media-task-text">{c.text}</span>
+                {c.recurrence && c.recurrence !== "none" && (
+                  <span className="media-task-repeat" title={`Repeats ${c.recurrence}`}>
+                    {IC.refresh}
+                  </span>
+                )}
               </button>
               <button
                 className={`btn ghost icon media-task-focus ${
