@@ -1,0 +1,62 @@
+.obsidian-panel {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.obs-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.obs-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.obs-status.ok .obs-status-dot {
+  background: var(--rp-foam);
+  box-shadow: 0 0 8px var(--rp-foam);
+}
+.obs-status.ok .obs-status-text {
+  color: var(--rp-foam);
+}
+
+.obs-status.warn .obs-status-dot {
+  background: var(--rp-gold);
+}
+.obs-status.warn .obs-status-text {
+  color: var(--rp-gold);
+}
+
+.obs-status.off .obs-status-dot {
+  background: var(--rp-muted);
+}
+.obs-status.off .obs-status-text {
+  color: var(--rp-muted);
+}
+
+.obs-vault-path {
+  font-size: 0.72rem;
+  color: var(--rp-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.obs-open {
+  width: 100%;
+  padding: 0.6rem;
+}
+
+.obs-settings {
+  width: 100%;
+  font-size: 0.82rem;
+}

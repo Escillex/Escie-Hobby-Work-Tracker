@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useApp } from "../lib/state";
-import { appendToInbox, promoteToNote, openVault } from "../lib/obsidian";
+import { appendToInbox, promoteToNote } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import "./ImpulseLot.css";
 
-export function ImpulseLot() {
+export function ImpulseLot({ onOpen }: { onOpen?: () => void }) {
   const { data, dispatch } = useApp();
   const [text, setText] = useState("");
   const [showDone, setShowDone] = useState(false);
@@ -42,15 +42,15 @@ export function ImpulseLot() {
 
   return (
     <aside className="impulse-lot glass">
-      <div className="panel-title">
-        {IC.bulb} Impulse parking lot
-        {vaultSet && (
-          <button
-            className="btn ghost icon vault-btn"
-            title="Open vault in Obsidian"
-            onClick={() => openVault(data.settings)}
-          >
-            {IC.book}
+      <div
+        className="panel-title"
+        onDoubleClick={onOpen}
+        title={onOpen ? "Double-click to open Notes" : undefined}
+      >
+        {IC.bulb} Notes / Impulse parking lot
+        {onOpen && (
+          <button className="btn ghost icon vault-btn" title="Open Notes tab" onClick={onOpen}>
+            {IC.external}
           </button>
         )}
       </div>

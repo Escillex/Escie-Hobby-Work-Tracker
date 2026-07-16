@@ -42,8 +42,42 @@ ${impulse.text}
   return path;
 }
 
+/** Write an in-app note to the vault as a markdown file and open it. */
+export async function promoteNoteToVault(
+  settings: Settings,
+  title: string,
+  body: string,
+): Promise<string> {
+  if (!settings.vaultPath) throw new Error("No vault folder set");
+  const safe =
+    title
+      .slice(0, 60)
+      .replace(/[/\\:*?"<>|#^[\]]/g, "")
+      .trim() || "Untitled";
+  const path = await invoke<string>("create_note", {
+    dir: settings.vaultPath,
+    filename: `${safe}.md`,
+    content: body,
+  });
+  await openUrl(`obsidian://open?path=${encodeURIComponent(path)}`);
+  return path;
+}
+
 /** Open the vault itself in Obsidian. */
 export async function openVault(settings: Settings): Promise<void> {
   if (!settings.vaultPath) return;
   await openUrl(`obsidian://open?path=${encodeURIComponent(settings.vaultPath)}`);
+}
+
+export interface ObsidianStatus {
+  vaultExists: boolean;
+  installed: boolean;
+}
+
+/** Whether the configured vault folder exists and Obsidian is installed. */
+export async function obsidianStatus(vaultPath: string | undefined): Promise<ObsidianStatus> {
+  const s = await invoke<{ vault_exists: boolean; installed: boolean }>("obsidian_status", {
+    vaultPath: vaultPath ?? "",
+  });
+  return { vaultExists: s.vault_exists, installed: s.installed };
 }

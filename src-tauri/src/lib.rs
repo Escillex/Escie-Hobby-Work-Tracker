@@ -108,6 +108,41 @@ fn installed_steam_appids() -> Vec<u32> {
     ids.into_iter().collect()
 }
 
+#[derive(serde::Serialize)]
+struct ObsidianStatus {
+    vault_exists: bool,
+    installed: bool,
+}
+
+/// Report whether the configured vault folder exists and whether an Obsidian
+/// binary (native or flatpak) is present on this machine.
+#[tauri::command]
+fn obsidian_status(vault_path: String) -> ObsidianStatus {
+    let vault_exists = !vault_path.is_empty() && std::path::Path::new(&vault_path).is_dir();
+
+    let on_path = std::process::Command::new("sh")
+        .arg("-c")
+        .arg("command -v obsidian")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    let home = std::env::var("HOME").unwrap_or_default();
+    let flatpak = [
+        "/var/lib/flatpak/app/md.obsidian.Obsidian".to_string(),
+        format!("{home}/.local/share/flatpak/app/md.obsidian.Obsidian"),
+    ]
+    .iter()
+    .any(|p| std::path::Path::new(p).exists());
+
+    ObsidianStatus {
+        vault_exists,
+        installed: on_path || flatpak,
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -120,7 +155,8 @@ pub fn run() {
             launch_app,
             append_note,
             create_note,
-            installed_steam_appids
+            installed_steam_appids,
+            obsidian_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

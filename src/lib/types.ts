@@ -75,6 +75,14 @@ export interface MediaEntry {
   checklist?: ChecklistItem[];
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
+}
+
 export type Recurrence = "none" | "daily" | "weekly";
 
 export interface Todo {
@@ -115,6 +123,7 @@ export interface AppData {
     entries: MediaEntry[];
   };
   todos: Todo[];
+  notes: Note[];
   stats: Stats;
   settings: Settings;
 }
@@ -146,6 +155,7 @@ export function defaultData(): AppData {
       entries: [],
     },
     todos: [],
+    notes: [],
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },
   };

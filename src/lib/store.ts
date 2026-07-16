@@ -41,6 +41,9 @@ function migrate(data: AppData): AppData {
   if (!next.todos) {
     next = { ...next, todos: [] };
   }
+  if (!next.notes) {
+    next = { ...next, notes: [] };
+  }
   // The dopamine menu was removed; drop its stale key from old data files.
   if ("dopamine" in next) {
     const copy = { ...next };

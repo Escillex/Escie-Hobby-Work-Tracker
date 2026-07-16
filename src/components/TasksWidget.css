@@ -1,0 +1,69 @@
+.tasks-widget {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tasks-widget .panel-title {
+  cursor: default;
+}
+
+.tw-day-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rp-subtle);
+}
+
+.tw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.tw-empty {
+  margin: 0;
+  color: var(--rp-muted);
+  font-size: 0.8rem;
+}
+
+.tw-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--glass-overlay);
+  border-left: 3px solid transparent;
+}
+
+.tw-item.overdue {
+  border-left-color: var(--rp-love);
+}
+
+.tw-item.done .tw-text {
+  color: var(--rp-muted);
+  text-decoration: line-through;
+}
+
+.tw-text {
+  flex: 1;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tw-time {
+  font-size: 0.72rem;
+  color: var(--rp-gold);
+  white-space: nowrap;
+}
+
+.tw-item.overdue .tw-time {
+  color: var(--rp-love);
+}

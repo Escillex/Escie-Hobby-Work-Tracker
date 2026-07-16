@@ -6,13 +6,15 @@ import { ImpulseLot } from "./components/ImpulseLot";
 import { NowNextCard } from "./components/NowNextCard";
 import { MediaTracker } from "./components/MediaTracker";
 import { TasksView } from "./components/TasksView";
+import { TasksWidget } from "./components/TasksWidget";
+import { NotesView } from "./components/NotesView";
 import { HyperfocusTimer } from "./components/HyperfocusTimer";
 import { GitHubGraph } from "./components/GitHubGraph";
 import { StatsBar } from "./components/StatsBar";
 import { SettingsPanel } from "./components/SettingsPanel";
 import "./App.css";
 
-type View = "dashboard" | "tasks";
+export type View = "dashboard" | "tasks" | "notes";
 
 function Dashboard() {
   const { data, hydrated } = useApp();
@@ -36,26 +38,25 @@ function Dashboard() {
 
   return (
     <div className="dash-grid">
-      <LauncherBar
-        view={view}
-        onView={setView}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
-      {view === "dashboard" ? (
+      <LauncherBar view={view} onView={setView} onOpenSettings={() => setSettingsOpen(true)} />
+
+      {view === "dashboard" && (
         <>
-          <ImpulseLot />
+          <ImpulseLot onOpen={() => setView("notes")} />
           <main className="dash-main">
             <NowNextCard />
             <MediaTracker />
           </main>
           <aside className="dash-rail">
+            <TasksWidget onOpen={() => setView("tasks")} />
             <HyperfocusTimer />
             <GitHubGraph />
           </aside>
         </>
-      ) : (
-        <TasksView />
       )}
+      {view === "tasks" && <TasksView />}
+      {view === "notes" && <NotesView onOpenSettings={() => setSettingsOpen(true)} />}
+
       <StatsBar />
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </div>

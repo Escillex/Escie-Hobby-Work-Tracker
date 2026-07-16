@@ -8,13 +8,15 @@ import { ColorPicker } from "./ColorPicker";
 import { IC } from "../lib/icons";
 import "./LauncherBar.css";
 
+type View = "dashboard" | "tasks" | "notes";
+
 export function LauncherBar({
   view,
   onView,
   onOpenSettings,
 }: {
-  view: "dashboard" | "tasks";
-  onView: (v: "dashboard" | "tasks") => void;
+  view: View;
+  onView: (v: View) => void;
   onOpenSettings: () => void;
 }) {
   const { data, dispatch } = useApp();
@@ -47,6 +49,12 @@ export function LauncherBar({
           onClick={() => onView("tasks")}
         >
           {IC.check} Tasks
+        </button>
+        <button
+          className={`view-tab ${view === "notes" ? "active" : ""}`}
+          onClick={() => onView("notes")}
+        >
+          {IC.note} Notes
         </button>
       </nav>
       <div className="launcher-buttons">

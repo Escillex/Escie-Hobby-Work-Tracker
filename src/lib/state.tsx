@@ -15,6 +15,7 @@ import type {
   MediaCategory,
   MediaEntry,
   Todo,
+  Note,
   Settings,
 } from "./types";
 import { localDate, uid } from "./types";
@@ -34,6 +35,9 @@ export type Action =
   | { type: "media/add"; entry: MediaEntry }
   | { type: "media/update"; entry: MediaEntry }
   | { type: "media/delete"; id: string }
+  | { type: "note/add"; note: Note }
+  | { type: "note/update"; note: Note }
+  | { type: "note/delete"; id: string }
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
@@ -153,6 +157,15 @@ function reducer(state: AppData, action: Action): AppData {
           entries: state.media.entries.filter((e) => e.id !== action.id),
         },
       };
+    case "note/add":
+      return { ...state, notes: [action.note, ...state.notes] };
+    case "note/update":
+      return {
+        ...state,
+        notes: state.notes.map((n) => (n.id === action.note.id ? action.note : n)),
+      };
+    case "note/delete":
+      return { ...state, notes: state.notes.filter((n) => n.id !== action.id) };
     case "todo/add":
       return { ...state, todos: [...state.todos, action.todo] };
     case "todo/update":
@@ -182,6 +195,7 @@ const EMPTY: AppData = {
   impulses: [],
   media: { categories: [], entries: [] },
   todos: [],
+  notes: [],
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },
 };
