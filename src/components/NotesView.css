@@ -15,10 +15,6 @@
   overflow-y: auto;
 }
 
-.notes-side .impulse-lot {
-  min-height: 220px;
-}
-
 .notes-list {
   padding: 1rem;
   display: flex;
@@ -40,15 +36,40 @@
 
 .notes-list-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.5rem 0.6rem;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--glass-overlay);
+  transition: border-color 0.15s var(--ease);
+}
+
+.note-item-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: transparent;
+  border: none;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s var(--ease);
+  color: inherit;
+}
+
+.note-item-focus {
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+
+.notes-list-item:hover .note-item-focus,
+.note-item-focus.focused {
+  opacity: 1;
+}
+
+.note-item-focus.focused {
+  color: var(--rp-gold);
 }
 
 .notes-list-item:hover {

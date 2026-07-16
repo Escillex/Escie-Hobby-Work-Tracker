@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AppProvider, useApp } from "./lib/state";
 import { useTodoScheduler } from "./lib/useTodoScheduler";
 import { LauncherBar } from "./components/LauncherBar";
-import { ImpulseLot } from "./components/ImpulseLot";
+import { NotesWidget } from "./components/NotesWidget";
 import { NowNextCard } from "./components/NowNextCard";
 import { MediaTracker } from "./components/MediaTracker";
 import { TasksView } from "./components/TasksView";
@@ -42,7 +42,7 @@ function Dashboard() {
 
       {view === "dashboard" && (
         <>
-          <ImpulseLot onOpen={() => setView("notes")} />
+          <NotesWidget onOpen={() => setView("notes")} />
           <main className="dash-main">
             <NowNextCard />
             <MediaTracker />

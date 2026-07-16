@@ -3,14 +3,15 @@ import { marked } from "marked";
 import type { Note } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
+import { useFocusActions } from "../lib/focus";
 import { promoteNoteToVault } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import { ObsidianPanel } from "./ObsidianPanel";
-import { ImpulseLot } from "./ImpulseLot";
 import "./NotesView.css";
 
 export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { data, dispatch } = useApp();
+  const { focusNow, isFocused } = useFocusActions();
   const notes = data.notes;
   const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
   const [preview, setPreview] = useState(false);
@@ -62,7 +63,6 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
     <div className="notes-view">
       <aside className="notes-side">
         <ObsidianPanel onOpenSettings={onOpenSettings} />
-        <ImpulseLot />
         <div className="notes-list glass">
           <div className="panel-title">
             {IC.note} Notes
@@ -73,19 +73,32 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
           <div className="notes-list-items">
             {notes.length === 0 && <p className="notes-empty">No notes yet.</p>}
             {notes.map((n) => (
-              <button
+              <div
                 key={n.id}
                 className={`notes-list-item ${n.id === selectedId ? "active" : ""}`}
-                onClick={() => {
-                  setSelectedId(n.id);
-                  setPreview(false);
-                }}
               >
-                <span className="note-item-title">{n.title || "Untitled"}</span>
-                <span className="note-item-preview">
-                  {n.body.replace(/[#*`>\-\n]/g, " ").trim().slice(0, 42) || "empty"}
-                </span>
-              </button>
+                <button
+                  className="note-item-open"
+                  onClick={() => {
+                    setSelectedId(n.id);
+                    setPreview(false);
+                  }}
+                >
+                  <span className="note-item-title">{n.title || "Untitled"}</span>
+                  <span className="note-item-preview">
+                    {n.body.replace(/[#*`>\-\n]/g, " ").trim().slice(0, 42) || "empty"}
+                  </span>
+                </button>
+                <button
+                  className={`btn ghost icon note-item-focus ${
+                    isFocused({ kind: "note", id: n.id }) ? "focused" : ""
+                  }`}
+                  title="Focus on this"
+                  onClick={() => focusNow({ kind: "note", id: n.id })}
+                >
+                  {IC.target}
+                </button>
+              </div>
             ))}
           </div>
         </div>

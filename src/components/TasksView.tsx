@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Todo } from "../lib/types";
 import { uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
+import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
 import { Calendar, type DotKind } from "./Calendar";
 import "./TasksView.css";
@@ -216,6 +217,7 @@ function TaskRow({
   onDone: () => void;
   onDelete: () => void;
 }) {
+  const { focusNow, isFocused } = useFocusActions();
   const overdue =
     todo.recurrence === "none" &&
     todo.dueAt != null &&
@@ -233,6 +235,13 @@ function TaskRow({
       </button>
       <span className="task-text">{todo.text}</span>
       {label && <span className="task-label">{label}</span>}
+      <button
+        className={`btn ghost icon task-focus ${isFocused({ kind: "todo", id: todo.id }) ? "focused" : ""}`}
+        title="Focus on this"
+        onClick={() => focusNow({ kind: "todo", id: todo.id })}
+      >
+        {IC.target}
+      </button>
       <button className="btn ghost icon danger" title="Delete" onClick={onDelete}>
         {IC.close}
       </button>

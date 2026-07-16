@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
+import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
 import {
   steamStoreSearch,
@@ -379,6 +380,7 @@ function EntryDetailModal({
   onUpdate: (e: MediaEntry) => void;
   onRate: (score: number | undefined) => void;
 }) {
+  const { focusNow, isFocused } = useFocusActions();
   const [newItem, setNewItem] = useState("");
   const checklist = entry.checklist ?? [];
 
@@ -485,6 +487,15 @@ function EntryDetailModal({
               </button>
               <span className="detail-check-text">{c.text}</span>
               <button
+                className={`btn ghost icon ${
+                  isFocused({ kind: "task", id: c.id, parentId: entry.id }) ? "focused" : ""
+                }`}
+                title="Focus on this task"
+                onClick={() => focusNow({ kind: "task", id: c.id, parentId: entry.id })}
+              >
+                {IC.target}
+              </button>
+              <button
                 className="btn ghost icon danger"
                 title="Remove"
                 onClick={() => remove(c.id)}
@@ -538,6 +549,7 @@ function MediaCard({
   onDetails: () => void;
   onDelete: () => void;
 }) {
+  const { focusNow, isFocused } = useFocusActions();
   const open = entry.checklist?.filter((c) => !c.done) ?? [];
   const openTasks = open.length;
   const hasNotes = Boolean(entry.notes?.trim());
@@ -605,6 +617,13 @@ function MediaCard({
             {IC.note}
             {openTasks > 0 && <span className="detail-badge">{openTasks}</span>}
           </button>
+          <button
+            className={`btn ghost icon ${isFocused({ kind: "media", id: entry.id }) ? "focused" : ""}`}
+            title="Focus on this"
+            onClick={() => focusNow({ kind: "media", id: entry.id })}
+          >
+            {IC.target}
+          </button>
           <button className="btn ghost icon danger" title="Remove" onClick={onDelete}>
             {IC.close}
           </button>
@@ -614,15 +633,25 @@ function MediaCard({
       {openTasks > 0 && (
         <div className="media-tasks-preview">
           {open.slice(0, 3).map((c) => (
-            <button
-              key={c.id}
-              className="media-task-line"
-              title="Mark done"
-              onClick={() => onToggleTask(c.id)}
-            >
-              <span className="check-box" />
-              <span className="media-task-text">{c.text}</span>
-            </button>
+            <div key={c.id} className="media-task-line">
+              <button
+                className="media-task-toggle"
+                title="Mark done"
+                onClick={() => onToggleTask(c.id)}
+              >
+                <span className="check-box" />
+                <span className="media-task-text">{c.text}</span>
+              </button>
+              <button
+                className={`btn ghost icon media-task-focus ${
+                  isFocused({ kind: "task", id: c.id, parentId: entry.id }) ? "focused" : ""
+                }`}
+                title="Focus on this task"
+                onClick={() => focusNow({ kind: "task", id: c.id, parentId: entry.id })}
+              >
+                {IC.target}
+              </button>
+            </div>
           ))}
           {openTasks > 3 && (
             <button className="media-task-more" onClick={onDetails}>

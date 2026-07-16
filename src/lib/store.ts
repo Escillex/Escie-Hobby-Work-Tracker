@@ -44,6 +44,28 @@ function migrate(data: AppData): AppData {
   if (!next.notes) {
     next = { ...next, notes: [] };
   }
+  if (!next.focus) {
+    next = { ...next, focus: {} };
+  }
+  // Impulses merged into notes — each impulse becomes a titled note.
+  const legacy = (next as { impulses?: { id: string; text: string; createdAt: string }[] })
+    .impulses;
+  if (legacy?.length) {
+    const migrated: typeof next.notes = legacy.map((i) => ({
+      id: i.id,
+      title: i.text,
+      body: "",
+      createdAt: i.createdAt,
+      updatedAt: i.createdAt,
+    }));
+    const copy = { ...next, notes: [...migrated, ...next.notes] };
+    delete (copy as Record<string, unknown>).impulses;
+    next = copy;
+  } else if ("impulses" in next) {
+    const copy = { ...next };
+    delete (copy as Record<string, unknown>).impulses;
+    next = copy;
+  }
   // Movies/TV moved from manual entry to TMDB-backed search.
   const needsTmdb = next.media.categories.some(
     (c) => (c.id === "movies" || c.id === "tv") && c.source === "manual",

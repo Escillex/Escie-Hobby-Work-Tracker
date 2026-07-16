@@ -213,6 +213,14 @@
 .media-task-line {
   display: flex;
   align-items: center;
+  gap: 0.25rem;
+}
+
+.media-task-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   gap: 0.45rem;
   padding: 0.15rem 0.1rem;
   background: transparent;
@@ -223,19 +231,36 @@
   transition: color 0.15s var(--ease);
 }
 
-.media-task-line:hover {
+.media-task-toggle:hover {
   color: var(--rp-text);
 }
 
-.media-task-line .check-box {
+.media-task-toggle .check-box {
   width: 1rem;
   height: 1rem;
   border-width: 1.5px;
   border-radius: 4px;
 }
 
-.media-task-line:hover .check-box {
+.media-task-toggle:hover .check-box {
   border-color: var(--rp-foam);
+}
+
+.media-task-focus {
+  opacity: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.7rem;
+  transition: opacity 0.15s var(--ease);
+}
+
+.media-task-line:hover .media-task-focus,
+.media-task-focus.focused {
+  opacity: 1;
+}
+
+.media-task-focus.focused {
+  color: var(--rp-gold);
 }
 
 .media-task-text {

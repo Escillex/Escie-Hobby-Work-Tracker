@@ -10,15 +10,14 @@ import {
 import type {
   AppData,
   Launcher,
-  Impulse,
-  ImpulseStatus,
   MediaCategory,
   MediaEntry,
   Todo,
   Note,
+  FocusRef,
   Settings,
 } from "./types";
-import { localDate, uid } from "./types";
+import { localDate } from "./types";
 import { loadData, saveData } from "./store";
 
 export type Action =
@@ -26,9 +25,6 @@ export type Action =
   | { type: "launcher/add"; launcher: Launcher }
   | { type: "launcher/update"; launcher: Launcher }
   | { type: "launcher/delete"; id: string }
-  | { type: "impulse/add"; text: string }
-  | { type: "impulse/setStatus"; id: string; status: ImpulseStatus }
-  | { type: "impulse/delete"; id: string }
   | { type: "category/add"; category: MediaCategory }
   | { type: "category/delete"; id: string }
   | { type: "media/replaceCategory"; categoryId: string; entries: MediaEntry[] }
@@ -41,6 +37,7 @@ export type Action =
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
+  | { type: "focus/set"; slot: "now" | "next"; ref?: FocusRef }
   | { type: "settings/update"; settings: Partial<Settings> };
 
 function reducer(state: AppData, action: Action): AppData {
@@ -60,42 +57,6 @@ function reducer(state: AppData, action: Action): AppData {
       return {
         ...state,
         launchers: state.launchers.filter((l) => l.id !== action.id),
-      };
-    case "impulse/add": {
-      const impulse: Impulse = {
-        id: uid(),
-        text: action.text,
-        createdAt: new Date().toISOString(),
-        status: "parked",
-      };
-      return { ...state, impulses: [impulse, ...state.impulses] };
-    }
-    case "impulse/setStatus":
-      return {
-        ...state,
-        impulses: state.impulses.map((i) => {
-          if (i.id === action.id) {
-            return {
-              ...i,
-              status: action.status,
-              completedAt:
-                action.status === "done" ? new Date().toISOString() : undefined,
-            };
-          }
-          // NOW and NEXT are single slots — demote any current holder back to parked.
-          if (
-            (action.status === "now" || action.status === "next") &&
-            i.status === action.status
-          ) {
-            return { ...i, status: "parked" };
-          }
-          return i;
-        }),
-      };
-    case "impulse/delete":
-      return {
-        ...state,
-        impulses: state.impulses.filter((i) => i.id !== action.id),
       };
     case "category/add":
       return {
@@ -175,6 +136,8 @@ function reducer(state: AppData, action: Action): AppData {
       };
     case "todo/delete":
       return { ...state, todos: state.todos.filter((t) => t.id !== action.id) };
+    case "focus/set":
+      return { ...state, focus: { ...state.focus, [action.slot]: action.ref } };
     case "settings/update":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     default:
@@ -192,10 +155,10 @@ const AppContext = createContext<Ctx | null>(null);
 
 const EMPTY: AppData = {
   launchers: [],
-  impulses: [],
   media: { categories: [], entries: [] },
   todos: [],
   notes: [],
+  focus: {},
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },
 };

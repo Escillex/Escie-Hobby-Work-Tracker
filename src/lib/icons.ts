@@ -21,4 +21,5 @@ export const IC = {
   note: "",
   download: "",
   external: "",
+  target: "",
 } as const;

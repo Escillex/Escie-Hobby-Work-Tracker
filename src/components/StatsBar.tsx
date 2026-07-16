@@ -7,8 +7,8 @@ export function StatsBar() {
   const { data } = useApp();
 
   const weekAgo = Date.now() - 7 * 86_400_000;
-  const capturedThisWeek = data.impulses.filter(
-    (i) => new Date(i.createdAt).getTime() >= weekAgo,
+  const capturedThisWeek = data.notes.filter(
+    (n) => new Date(n.createdAt).getTime() >= weekAgo,
   ).length;
 
   const thisMonth = localDate().slice(0, 7); // YYYY-MM
@@ -21,7 +21,7 @@ export function StatsBar() {
       <span title="Days in a row you've opened the dash">
         {IC.fire} {data.stats.streak} day{data.stats.streak === 1 ? "" : "s"}
       </span>
-      <span title="Impulses captured in the last 7 days">
+      <span title="Notes captured in the last 7 days">
         {IC.bulb} {capturedThisWeek} captured this week
       </span>
       <span title="Media completed this month">

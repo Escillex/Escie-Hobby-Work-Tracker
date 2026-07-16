@@ -215,7 +215,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
       <div className="field">
-        <label>Inbox note (impulses get appended here)</label>
+        <label>Inbox note (captured notes get appended here)</label>
         <input
           className="input"
           defaultValue={s.vaultInboxNote ?? ""}

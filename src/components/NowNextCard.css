@@ -36,6 +36,12 @@
   font-weight: 600;
 }
 
+.now-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--rp-subtle);
+}
+
 .next-text {
   margin: 0;
   font-size: 1rem;

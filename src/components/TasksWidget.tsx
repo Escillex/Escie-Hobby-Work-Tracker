@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Todo } from "../lib/types";
 import { localDate } from "../lib/types";
 import { useApp } from "../lib/state";
+import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
 import { Calendar, type DotKind } from "./Calendar";
 import "./TasksWidget.css";
@@ -10,6 +11,7 @@ const dueDay = (iso: string) => localDate(new Date(iso));
 
 export function TasksWidget({ onOpen }: { onOpen: () => void }) {
   const { data, dispatch } = useApp();
+  const { focusNow, isFocused } = useFocusActions();
   const today = localDate();
   const [selected, setSelected] = useState(today);
 
@@ -59,6 +61,13 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
                 {t.done ? IC.check : null}
               </button>
               <span className="tw-text">{t.text}</span>
+              <button
+                className={`btn ghost icon tw-focus ${isFocused({ kind: "todo", id: t.id }) ? "focused" : ""}`}
+                title="Focus on this"
+                onClick={() => focusNow({ kind: "todo", id: t.id })}
+              >
+                {IC.target}
+              </button>
               <span className="tw-time">
                 {new Date(t.dueAt!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>

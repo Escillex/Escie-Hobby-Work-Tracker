@@ -16,14 +16,14 @@ export interface Launcher {
   color: RosePineColor;
 }
 
-export type ImpulseStatus = "parked" | "now" | "next" | "done";
+export type FocusKind = "media" | "todo" | "task" | "note";
 
-export interface Impulse {
+/** A pointer to whatever you're currently focusing on. `parentId` is the
+ *  owning media entry when kind is "task" (a game/show checklist item). */
+export interface FocusRef {
+  kind: FocusKind;
   id: string;
-  text: string;
-  createdAt: string; // ISO
-  completedAt?: string;
-  status: ImpulseStatus;
+  parentId?: string;
 }
 
 export type CategorySource =
@@ -137,13 +137,13 @@ export interface Settings {
 
 export interface AppData {
   launchers: Launcher[];
-  impulses: Impulse[];
   media: {
     categories: MediaCategory[];
     entries: MediaEntry[];
   };
   todos: Todo[];
   notes: Note[];
+  focus: { now?: FocusRef; next?: FocusRef };
   stats: Stats;
   settings: Settings;
 }
@@ -163,7 +163,6 @@ export function defaultData(): AppData {
       { id: uid(), name: "Zen", command: "zen-browser", color: "iris" },
       { id: uid(), name: "Steam", command: "steam", color: "foam" },
     ],
-    impulses: [],
     media: {
       categories: [
         { id: "anime", name: "Anime", source: "anilist-anime" },
@@ -176,6 +175,7 @@ export function defaultData(): AppData {
     },
     todos: [],
     notes: [],
+    focus: {},
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },
   };

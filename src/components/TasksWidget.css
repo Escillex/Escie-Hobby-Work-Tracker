@@ -58,6 +58,23 @@
   text-overflow: ellipsis;
 }
 
+.tw-focus {
+  opacity: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.7rem;
+  transition: opacity 0.15s var(--ease);
+}
+
+.tw-item:hover .tw-focus,
+.tw-focus.focused {
+  opacity: 1;
+}
+
+.tw-focus.focused {
+  color: var(--rp-gold);
+}
+
 .tw-time {
   font-size: 0.72rem;
   color: var(--rp-gold);
