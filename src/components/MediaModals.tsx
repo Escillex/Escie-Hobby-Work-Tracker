@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { ChecklistItem, MediaEntry, MediaStatus, Recurrence } from "../lib/types";
-import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
-import { toggleChecklistItem, nextRecurrence, RECURRENCE_LABEL } from "../lib/media";
+import type { ChecklistItem, MediaCategory, MediaEntry, Recurrence } from "../lib/types";
+import { uid, localDate } from "../lib/types";
+import { toggleChecklistItem, nextRecurrence, RECURRENCE_LABEL, statusesFor } from "../lib/media";
 import { useFocusActions } from "../lib/focus";
 import { setSeasonWatched } from "../lib/tmdb";
 import { IC } from "../lib/icons";
@@ -239,88 +239,141 @@ export function AddCategoryModal({
   );
 }
 
-export function ManualEntryModal({
-  categoryId,
-  withLaunch,
+export function EntryFormModal({
+  category,
+  entry,
   onClose,
   onSave,
 }: {
-  categoryId: string;
-  withLaunch: boolean;
+  category: MediaCategory;
+  entry?: MediaEntry;
   onClose: () => void;
   onSave: (e: MediaEntry) => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [total, setTotal] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
-  const [launchCommand, setLaunchCommand] = useState("");
-  const [status, setStatus] = useState<MediaStatus>("PLANNING");
+  const isGame = category.source === "games";
+  const statuses = statusesFor(category);
+  const editing = entry != null;
+
+  const [title, setTitle] = useState(entry?.title ?? "");
+  const [total, setTotal] = useState(
+    entry?.total != null ? String(entry.total) : "",
+  );
+  const [hours, setHours] = useState(
+    isGame && entry ? String(entry.progress) : "",
+  );
+  const [coverUrl, setCoverUrl] = useState(entry?.coverUrl ?? "");
+  const [launchCommand, setLaunchCommand] = useState(entry?.launchCommand ?? "");
+  const [installed, setInstalled] = useState(entry?.installed ?? false);
+  const [status, setStatus] = useState<string>(
+    entry?.status ?? statuses[0] ?? "PLANNING",
+  );
+
+  const save = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const base: MediaEntry = {
+      ...(entry ?? {
+        id: uid(),
+        categoryId: category.id,
+        progress: 0,
+      }),
+      title: trimmed,
+      total: total ? Number(total) : isGame ? null : null,
+      coverUrl: coverUrl.trim() || undefined,
+      status,
+    };
+    if (isGame) {
+      base.progress = hours ? Number(hours) : (entry?.progress ?? 0);
+      base.launchCommand = launchCommand.trim() || undefined;
+      base.installed = installed || undefined;
+    }
+    if (status === "COMPLETED" && !base.completedAt) base.completedAt = localDate();
+    onSave(base);
+  };
 
   return (
-    <Modal title="Add entry" onClose={onClose}>
+    <Modal title={editing ? "Edit entry" : "Add entry"} onClose={onClose}>
       <div className="field">
         <label>Title</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-      </div>
-      <div className="field">
-        <label>{withLaunch ? "Total (optional)" : "Total episodes / parts (optional)"}</label>
         <input
           className="input"
-          type="number"
-          min="1"
-          value={total}
-          onChange={(e) => setTotal(e.target.value)}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoFocus
         />
       </div>
+      {isGame ? (
+        <div className="field">
+          <label>Hours played</label>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
+        </div>
+      ) : (
+        <div className="field">
+          <label>Total episodes / parts (optional)</label>
+          <input
+            className="input"
+            type="number"
+            min="1"
+            value={total}
+            onChange={(e) => setTotal(e.target.value)}
+          />
+        </div>
+      )}
       <div className="field">
         <label>Cover image URL (optional)</label>
         <input
           className="input"
           value={coverUrl}
           onChange={(e) => setCoverUrl(e.target.value)}
-          placeholder="https://…"
+          placeholder="https://..."
         />
       </div>
-      {withLaunch && (
-        <div className="field">
-          <label>Launch command (optional)</label>
-          <input
-            className="input"
-            value={launchCommand}
-            onChange={(e) => setLaunchCommand(e.target.value)}
-            placeholder="hydra, xdg-open steam://rungameid/…, an-anime-game-launcher"
-          />
-        </div>
+      {isGame && (
+        <>
+          <div className="field">
+            <label>Launch command (optional)</label>
+            <input
+              className="input"
+              value={launchCommand}
+              onChange={(e) => setLaunchCommand(e.target.value)}
+              placeholder="hydra, xdg-open steam://rungameid/..., an-anime-game-launcher"
+            />
+          </div>
+          <label className="entry-form-check">
+            <input
+              type="checkbox"
+              checked={installed}
+              onChange={(e) => setInstalled(e.target.checked)}
+            />
+            Installed on this machine
+          </label>
+        </>
       )}
       <div className="field">
         <label>Status</label>
-        <select className="input" value={status} onChange={(e) => setStatus(e.target.value as MediaStatus)}>
-          {MEDIA_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.toLowerCase()}
-            </option>
-          ))}
+        <select
+          className="input"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          {(statuses.includes(status) ? statuses : [status, ...statuses]).map(
+            (s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase()}
+              </option>
+            ),
+          )}
         </select>
       </div>
       <div className="modal-actions">
-        <button
-          className="btn primary"
-          disabled={!title.trim()}
-          onClick={() =>
-            onSave({
-              id: uid(),
-              categoryId,
-              title: title.trim(),
-              progress: 0,
-              total: total ? Number(total) : null,
-              coverUrl: coverUrl.trim() || undefined,
-              launchCommand: launchCommand.trim() || undefined,
-              status,
-              completedAt: status === "COMPLETED" ? localDate() : undefined,
-            })
-          }
-        >
-          Add
+        <button className="btn primary" disabled={!title.trim()} onClick={save}>
+          {editing ? "Save" : "Add"}
         </button>
       </div>
     </Modal>

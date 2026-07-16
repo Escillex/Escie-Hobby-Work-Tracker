@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { MEDIA_STATUSES, uid } from "../lib/types";
-import { toggleChecklistItem } from "../lib/media";
+import { toggleChecklistItem, isEntryInstalled } from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -24,7 +24,7 @@ import {
 } from "../lib/tmdb";
 import { IC } from "../lib/icons";
 import { StarRating } from "./StarRating";
-import { EntryDetailModal, AddCategoryModal, ManualEntryModal } from "./MediaModals";
+import { EntryDetailModal, AddCategoryModal, EntryFormModal } from "./MediaModals";
 import "./MediaTracker.css";
 
 export function MediaTracker() {
@@ -109,6 +109,8 @@ function CategoryView({
   const [addingManual, setAddingManual] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailEntry = entries.find((e) => e.id === detailId) ?? null;
+  const [editId, setEditId] = useState<string | null>(null);
+  const editEntry = entries.find((e) => e.id === editId) ?? null;
   const [installed, setInstalled] = useState<Set<number> | null>(null);
   const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
 
@@ -244,8 +246,7 @@ function CategoryView({
     }
   };
 
-  const isInstalled = (e: MediaEntry) =>
-    e.steamAppId != null && (installed?.has(e.steamAppId) ?? false);
+  const isInstalled = (e: MediaEntry) => isEntryInstalled(e, installed);
 
   const visible =
     isGames && installFilter !== "all"
@@ -344,19 +345,31 @@ function CategoryView({
             onRate={(score) => rate(e, score)}
             onToggleTask={(itemId) => toggleTask(e, itemId)}
             onDetails={() => setDetailId(e.id)}
+            onEdit={() => setEditId(e.id)}
             onDelete={() => dispatch({ type: "media/delete", id: e.id })}
           />
         ))}
       </div>
 
       {addingManual && (
-        <ManualEntryModal
-          categoryId={category.id}
-          withLaunch={isGames}
+        <EntryFormModal
+          category={category}
           onClose={() => setAddingManual(false)}
           onSave={(entry) => {
             dispatch({ type: "media/add", entry });
             setAddingManual(false);
+          }}
+        />
+      )}
+
+      {editEntry && (
+        <EntryFormModal
+          category={category}
+          entry={editEntry}
+          onClose={() => setEditId(null)}
+          onSave={(entry) => {
+            dispatch({ type: "media/update", entry });
+            setEditId(null);
           }}
         />
       )}
@@ -384,6 +397,7 @@ function MediaCard({
   onRate,
   onToggleTask,
   onDetails,
+  onEdit,
   onDelete,
 }: {
   entry: MediaEntry;
@@ -396,6 +410,7 @@ function MediaCard({
   onRate: (score: number | undefined) => void;
   onToggleTask: (itemId: string) => void;
   onDetails: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const { focusNow, isFocused } = useFocusActions();
@@ -465,6 +480,13 @@ function MediaCard({
           >
             {IC.note}
             {openTasks > 0 && <span className="detail-badge">{openTasks}</span>}
+          </button>
+          <button
+            className="btn ghost icon"
+            title="Edit entry"
+            onClick={onEdit}
+          >
+            {IC.edit}
           </button>
           <button
             className={`btn ghost icon ${isFocused({ kind: "media", id: entry.id }) ? "focused" : ""}`}

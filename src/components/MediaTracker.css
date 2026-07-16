@@ -521,3 +521,17 @@
   font-size: 0.72rem;
   padding: 0.2rem 0.45rem;
 }
+
+.entry-form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--rp-subtle);
+  margin: 0.2rem 0 0.6rem;
+  cursor: pointer;
+}
+
+.entry-form-check input {
+  width: auto;
+}

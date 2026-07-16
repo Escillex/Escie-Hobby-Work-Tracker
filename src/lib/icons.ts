@@ -3,6 +3,7 @@
  *  symbols fallback) installed system-wide. */
 export const IC = {
   gear: "",
+  edit: "", // pen-to-square (Nerd Font / Font Awesome)
   plus: "",
   close: "",
   check: "",
