@@ -560,7 +560,7 @@ function EntryDetailModal({
           ))}
           <div className="detail-check-add">
             <input
-              className="input"
+              className="input detail-check-input"
               placeholder="Add a task… (Enter)"
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
@@ -568,19 +568,21 @@ function EntryDetailModal({
                 if (e.key === "Enter") addItem();
               }}
             />
-            <select
-              className="input detail-check-recur"
-              value={newRecurrence}
-              title="Repeat"
-              onChange={(e) => setNewRecurrence(e.target.value as Recurrence)}
-            >
-              <option value="none">once</option>
-              <option value="daily">daily</option>
-              <option value="weekly">weekly</option>
-            </select>
-            <button className="btn" disabled={!newItem.trim()} onClick={addItem}>
-              {IC.plus}
-            </button>
+            <div className="detail-check-add-row">
+              <select
+                className="input detail-check-recur"
+                value={newRecurrence}
+                title="How often this task repeats"
+                onChange={(e) => setNewRecurrence(e.target.value as Recurrence)}
+              >
+                <option value="none">once</option>
+                <option value="daily">repeats daily</option>
+                <option value="weekly">repeats weekly</option>
+              </select>
+              <button className="btn" disabled={!newItem.trim()} onClick={addItem}>
+                {IC.plus} Add
+              </button>
+            </div>
           </div>
         </div>
       </div>

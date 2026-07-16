@@ -398,6 +398,7 @@
 
 .detail-check-text {
   flex: 1;
+  min-width: 0;
   word-break: break-word;
   font-size: 0.9rem;
 }
@@ -432,13 +433,27 @@
 
 .detail-check-add {
   display: flex;
+  flex-direction: column;
   gap: 0.4rem;
   margin-top: 0.15rem;
 }
 
+.detail-check-input {
+  width: 100%;
+}
+
+.detail-check-add-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
 .detail-check-recur {
-  flex: 0 0 auto;
-  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-check-add-row .btn {
+  flex-shrink: 0;
 }
 
 .media-task-repeat {
