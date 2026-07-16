@@ -190,22 +190,26 @@ function CategoryView({
     }
     const progress = entry.progress + 1;
     const completed = entry.total != null && progress >= entry.total;
-    const status: MediaStatus = completed ? "COMPLETED" : entry.status;
+    const status: string = completed ? "COMPLETED" : entry.status;
     dispatch({ type: "media/update", entry: { ...entry, progress, status } });
     if (isAniList && token && entry.anilistId) {
       try {
-        await saveEntry(token, { mediaId: entry.anilistId, progress, status });
+        await saveEntry(token, {
+          mediaId: entry.anilistId,
+          progress,
+          status: status as MediaStatus,
+        });
       } catch (e) {
         onNotice(`AniList push failed: ${e}`);
       }
     }
   };
 
-  const setStatus = async (entry: MediaEntry, status: MediaStatus) => {
+  const setStatus = async (entry: MediaEntry, status: string) => {
     dispatch({ type: "media/update", entry: { ...entry, status } });
     if (isAniList && token && entry.anilistId) {
       try {
-        await saveEntry(token, { mediaId: entry.anilistId, status });
+        await saveEntry(token, { mediaId: entry.anilistId, status: status as MediaStatus });
       } catch (e) {
         onNotice(`AniList push failed: ${e}`);
       }
@@ -609,7 +613,7 @@ function MediaCard({
   installed?: boolean;
   onBump: () => void;
   onLaunch: () => void;
-  onStatus: (s: MediaStatus) => void;
+  onStatus: (s: string) => void;
   onRate: (score: number | undefined) => void;
   onToggleTask: (itemId: string) => void;
   onDetails: () => void;
@@ -667,7 +671,7 @@ function MediaCard({
           <select
             className="input media-status"
             value={entry.status}
-            onChange={(e) => onStatus(e.target.value as MediaStatus)}
+            onChange={(e) => onStatus(e.target.value)}
           >
             {MEDIA_STATUSES.map((s) => (
               <option key={s} value={s}>

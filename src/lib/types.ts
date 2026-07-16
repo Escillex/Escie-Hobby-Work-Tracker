@@ -38,6 +38,7 @@ export interface MediaCategory {
   id: string;
   name: string;
   source: CategorySource;
+  statuses?: string[]; // custom ordered status list; falls back to MEDIA_STATUSES
 }
 
 export type MediaStatus =
@@ -79,7 +80,8 @@ export interface MediaEntry {
   coverUrl?: string;
   progress: number;
   total?: number | null;
-  status: MediaStatus;
+  status: string; // canonical MediaStatus for synced categories; free-form otherwise
+  installed?: boolean; // manual "installed on this machine" override (games)
   score?: number;
   completedAt?: string;
   anilistId?: number;
