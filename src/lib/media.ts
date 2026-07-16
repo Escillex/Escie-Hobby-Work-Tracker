@@ -1,5 +1,27 @@
-import type { CategorySource, MediaCategory, MediaEntry } from "./types";
-import { MEDIA_STATUSES } from "./types";
+import type { CategorySource, ChecklistItem, MediaCategory, MediaEntry, Recurrence } from "./types";
+import { MEDIA_STATUSES, localDate } from "./types";
+
+/** Toggle a checklist item, stamping the completion date for recurring ones
+ *  so the daily/weekly reset knows when it was last done. */
+export function toggleChecklistItem(c: ChecklistItem): ChecklistItem {
+  const done = !c.done;
+  if (c.recurrence && c.recurrence !== "none") {
+    return { ...c, done, lastDone: done ? localDate() : undefined };
+  }
+  return { ...c, done };
+}
+
+/** Cycle a checklist item's repeat setting: none → daily → weekly → none. */
+export function nextRecurrence(r: Recurrence | undefined): Recurrence | undefined {
+  if (r === "daily") return "weekly";
+  if (r === "weekly") return undefined;
+  return "daily";
+}
+
+export const RECURRENCE_LABEL: Record<"daily" | "weekly", string> = {
+  daily: "daily",
+  weekly: "weekly",
+};
 
 /** The status list a category uses — its custom set, or the canonical default. */
 export function statusesFor(category: MediaCategory): string[] {
