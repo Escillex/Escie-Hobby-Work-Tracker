@@ -99,10 +99,49 @@
   border-radius: 4px;
 }
 
+.media-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rp-iris) 12%, var(--rp-overlay));
+  border: 1px solid color-mix(in srgb, var(--rp-iris) 30%, transparent);
+  font-size: 0.85rem;
+}
+
+.media-bulk-status {
+  width: auto;
+}
+
 .media-grid-wrap {
   overflow-y: auto;
   min-height: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-content: start;
+}
+
+.media-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.media-group-head {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rp-muted);
+  margin: 0;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
   gap: 0.6rem;
@@ -117,6 +156,7 @@
 }
 
 .media-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -126,6 +166,24 @@
   border: 1px solid transparent;
   transition: transform 0.18s var(--ease), border-color 0.18s var(--ease),
     box-shadow 0.18s var(--ease);
+}
+
+.media-card.selected {
+  border-color: var(--rp-iris);
+  box-shadow: 0 0 0 1px var(--rp-iris);
+}
+
+.media-card-select {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 2;
+}
+
+.media-card-select input {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
 }
 
 .media-card-main {
@@ -520,4 +578,64 @@
 .season-done {
   font-size: 0.72rem;
   padding: 0.2rem 0.45rem;
+}
+
+.entry-form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--rp-subtle);
+  margin: 0.2rem 0 0.6rem;
+  cursor: pointer;
+}
+
+.manage-note {
+  font-size: 0.8rem;
+  color: var(--rp-gold);
+  margin: 0 0 0.4rem;
+}
+
+.manage-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.manage-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.manage-status-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-status-row .btn.icon {
+  flex-shrink: 0;
+}
+
+.manage-status-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.manage-status-add .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-up {
+  transform: rotate(-90deg);
+}
+
+.manage-down {
+  transform: rotate(90deg);
+}
+
+.entry-form-check input {
+  width: auto;
 }

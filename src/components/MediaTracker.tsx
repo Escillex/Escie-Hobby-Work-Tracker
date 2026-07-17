@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { ChecklistItem, MediaCategory, MediaEntry, MediaStatus, Recurrence } from "../lib/types";
-import { MEDIA_STATUSES, uid, localDate } from "../lib/types";
+import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
+import { uid } from "../lib/types";
+import { toggleChecklistItem, isEntryInstalled, groupByStatus, statusesFor } from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -19,45 +20,24 @@ import {
   tmdbRate,
   tmdbSyncPull,
   bumpCurrentSeason,
-  setSeasonWatched,
   type TmdbResult,
 } from "../lib/tmdb";
 import { IC } from "../lib/icons";
-import { Modal } from "./Modal";
 import { StarRating } from "./StarRating";
+import { EntryDetailModal, AddCategoryModal, EntryFormModal, ManageCategoryModal } from "./MediaModals";
 import "./MediaTracker.css";
-
-/** Toggle a checklist item, stamping the completion date for recurring ones
- *  so the daily/weekly reset knows when it was last done. */
-function toggleChecklistItem(c: ChecklistItem): ChecklistItem {
-  const done = !c.done;
-  if (c.recurrence && c.recurrence !== "none") {
-    return { ...c, done, lastDone: done ? localDate() : undefined };
-  }
-  return { ...c, done };
-}
-
-/** Cycle a checklist item's repeat setting: none → daily → weekly → none. */
-function nextRecurrence(r: Recurrence | undefined): Recurrence | undefined {
-  if (r === "daily") return "weekly";
-  if (r === "weekly") return undefined;
-  return "daily";
-}
-
-const RECURRENCE_LABEL: Record<"daily" | "weekly", string> = {
-  daily: "daily",
-  weekly: "weekly",
-};
 
 export function MediaTracker() {
   const { data, dispatch } = useApp();
   const categories = data.media.categories;
   const [activeId, setActiveId] = useState(categories[0]?.id);
   const [addingCategory, setAddingCategory] = useState(false);
+  const [managingId, setManagingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const active =
     categories.find((c) => c.id === activeId) ?? categories[0];
+  const managing = categories.find((c) => c.id === managingId) ?? null;
 
   useEffect(() => {
     if (!notice) return;
@@ -90,6 +70,13 @@ export function MediaTracker() {
         <button className="btn ghost icon" title="Add category" onClick={() => setAddingCategory(true)}>
           {IC.plus}
         </button>
+        <button
+          className="btn ghost icon"
+          title={`Manage ${active.name}`}
+          onClick={() => setManagingId(active.id)}
+        >
+          {IC.gear}
+        </button>
         {notice && <span className="media-notice">{notice}</span>}
       </div>
 
@@ -103,6 +90,22 @@ export function MediaTracker() {
             dispatch({ type: "category/add", category });
             setActiveId(category.id);
             setAddingCategory(false);
+          }}
+        />
+      )}
+
+      {managing && (
+        <ManageCategoryModal
+          category={managing}
+          onClose={() => setManagingId(null)}
+          onSave={(c) => {
+            dispatch({ type: "category/update", category: c });
+            setManagingId(null);
+          }}
+          onDelete={() => {
+            dispatch({ type: "category/delete", id: managing.id });
+            if (activeId === managing.id) setActiveId(categories[0]?.id);
+            setManagingId(null);
           }}
         />
       )}
@@ -131,8 +134,40 @@ function CategoryView({
   const [addingManual, setAddingManual] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailEntry = entries.find((e) => e.id === detailId) ?? null;
+  const [editId, setEditId] = useState<string | null>(null);
+  const editEntry = entries.find((e) => e.id === editId) ?? null;
   const [installed, setInstalled] = useState<Set<number> | null>(null);
   const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const clearSelection = () => setSelected(new Set());
+  const selectAll = () => setSelected(new Set(visible.map((e) => e.id)));
+
+  const bulkStatus = (status: string) => {
+    for (const e of visible) {
+      if (selected.has(e.id)) dispatch({ type: "media/update", entry: { ...e, status } });
+    }
+    clearSelection();
+  };
+  const bulkInstalled = (installedFlag: boolean) => {
+    for (const e of visible) {
+      if (selected.has(e.id))
+        dispatch({ type: "media/update", entry: { ...e, installed: installedFlag || undefined } });
+    }
+    clearSelection();
+  };
+  const bulkDelete = () => {
+    if (!confirm(`Delete ${selected.size} selected?`)) return;
+    for (const id of selected) dispatch({ type: "media/delete", id });
+    clearSelection();
+  };
 
   // Detect locally-installed Steam games when the Games tab is shown.
   useEffect(() => {
@@ -190,22 +225,26 @@ function CategoryView({
     }
     const progress = entry.progress + 1;
     const completed = entry.total != null && progress >= entry.total;
-    const status: MediaStatus = completed ? "COMPLETED" : entry.status;
+    const status: string = completed ? "COMPLETED" : entry.status;
     dispatch({ type: "media/update", entry: { ...entry, progress, status } });
     if (isAniList && token && entry.anilistId) {
       try {
-        await saveEntry(token, { mediaId: entry.anilistId, progress, status });
+        await saveEntry(token, {
+          mediaId: entry.anilistId,
+          progress,
+          status: status as MediaStatus,
+        });
       } catch (e) {
         onNotice(`AniList push failed: ${e}`);
       }
     }
   };
 
-  const setStatus = async (entry: MediaEntry, status: MediaStatus) => {
+  const setStatus = async (entry: MediaEntry, status: string) => {
     dispatch({ type: "media/update", entry: { ...entry, status } });
     if (isAniList && token && entry.anilistId) {
       try {
-        await saveEntry(token, { mediaId: entry.anilistId, status });
+        await saveEntry(token, { mediaId: entry.anilistId, status: status as MediaStatus });
       } catch (e) {
         onNotice(`AniList push failed: ${e}`);
       }
@@ -262,8 +301,7 @@ function CategoryView({
     }
   };
 
-  const isInstalled = (e: MediaEntry) =>
-    e.steamAppId != null && (installed?.has(e.steamAppId) ?? false);
+  const isInstalled = (e: MediaEntry) => isEntryInstalled(e, installed);
 
   const visible =
     isGames && installFilter !== "all"
@@ -272,8 +310,8 @@ function CategoryView({
         )
       : entries;
 
-  const current = visible.filter((e) => e.status === "CURRENT" || e.status === "REPEATING");
-  const rest = visible.filter((e) => e.status !== "CURRENT" && e.status !== "REPEATING");
+  const statuses = statusesFor(category);
+  const groups = groupByStatus(visible, statuses);
 
   return (
     <div className="media-body">
@@ -333,7 +371,59 @@ function CategoryView({
             {IC.plus} Add {category.name.replace(/s$/, "").toLowerCase()}
           </button>
         )}
+        <button
+          className={`btn ghost ${selectMode ? "active" : ""}`}
+          title="Select multiple"
+          onClick={() => {
+            setSelectMode((v) => !v);
+            clearSelection();
+          }}
+        >
+          {IC.check} Select
+        </button>
       </div>
+
+      {selectMode && selected.size > 0 && (
+        <div className="media-bulk-bar">
+          <span>{selected.size} selected</span>
+          <select
+            className="input media-bulk-status"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value) bulkStatus(e.target.value);
+              e.target.value = "";
+            }}
+          >
+            <option value="" disabled>
+              Set status...
+            </option>
+            {statusesFor(category).map((s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          {isGames && (
+            <>
+              <button className="btn ghost" onClick={() => bulkInstalled(true)}>
+                Mark installed
+              </button>
+              <button className="btn ghost" onClick={() => bulkInstalled(false)}>
+                Mark not installed
+              </button>
+            </>
+          )}
+          <button className="btn ghost danger" onClick={bulkDelete}>
+            Delete
+          </button>
+          <button className="btn ghost" onClick={selectAll}>
+            Select all
+          </button>
+          <button className="btn ghost" onClick={clearSelection}>
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="media-grid-wrap">
         {visible.length === 0 && (
@@ -349,32 +439,55 @@ function CategoryView({
                   : "Nothing here yet — add your first one."}
           </p>
         )}
-        {[...current, ...rest].map((e) => (
-          <MediaCard
-            key={e.id}
-            entry={e}
-            hoursMode={isGames}
-            movie={isMovie}
-            installed={isGames ? isInstalled(e) : undefined}
-            onBump={() => bump(e)}
-            onLaunch={() => launch(e)}
-            onStatus={(s) => setStatus(e, s)}
-            onRate={(score) => rate(e, score)}
-            onToggleTask={(itemId) => toggleTask(e, itemId)}
-            onDetails={() => setDetailId(e.id)}
-            onDelete={() => dispatch({ type: "media/delete", id: e.id })}
-          />
+        {groups.map((group) => (
+          <section key={group.status} className="media-group">
+            <h3 className="media-group-head">{group.status.toLowerCase()}</h3>
+            <div className="media-grid">
+              {group.entries.map((e) => (
+                <MediaCard
+                  key={e.id}
+                  entry={e}
+                  statuses={statuses}
+                  hoursMode={isGames}
+                  movie={isMovie}
+                  installed={isGames ? isInstalled(e) : undefined}
+                  onBump={() => bump(e)}
+                  onLaunch={() => launch(e)}
+                  onStatus={(s) => setStatus(e, s)}
+                  onRate={(score) => rate(e, score)}
+                  onToggleTask={(itemId) => toggleTask(e, itemId)}
+                  onDetails={() => setDetailId(e.id)}
+                  onEdit={() => setEditId(e.id)}
+                  onDelete={() => dispatch({ type: "media/delete", id: e.id })}
+                  selectMode={selectMode}
+                  selected={selected.has(e.id)}
+                  onToggleSelected={() => toggleSelected(e.id)}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
       {addingManual && (
-        <ManualEntryModal
-          categoryId={category.id}
-          withLaunch={isGames}
+        <EntryFormModal
+          category={category}
           onClose={() => setAddingManual(false)}
           onSave={(entry) => {
             dispatch({ type: "media/add", entry });
             setAddingManual(false);
+          }}
+        />
+      )}
+
+      {editEntry && (
+        <EntryFormModal
+          category={category}
+          entry={editEntry}
+          onClose={() => setEditId(null)}
+          onSave={(entry) => {
+            dispatch({ type: "media/update", entry });
+            setEditId(null);
           }}
         />
       )}
@@ -391,207 +504,9 @@ function CategoryView({
   );
 }
 
-function EntryDetailModal({
-  entry,
-  onClose,
-  onUpdate,
-  onRate,
-}: {
-  entry: MediaEntry;
-  onClose: () => void;
-  onUpdate: (e: MediaEntry) => void;
-  onRate: (score: number | undefined) => void;
-}) {
-  const { focusNow, isFocused } = useFocusActions();
-  const [newItem, setNewItem] = useState("");
-  const [newRecurrence, setNewRecurrence] = useState<Recurrence>("none");
-  const checklist = entry.checklist ?? [];
-
-  const addItem = () => {
-    const text = newItem.trim();
-    if (!text) return;
-    const item: ChecklistItem = {
-      id: uid(),
-      text,
-      done: false,
-      recurrence: newRecurrence === "none" ? undefined : newRecurrence,
-    };
-    onUpdate({ ...entry, checklist: [...checklist, item] });
-    setNewItem("");
-  };
-
-  const toggle = (id: string) =>
-    onUpdate({
-      ...entry,
-      checklist: checklist.map((c) => (c.id === id ? toggleChecklistItem(c) : c)),
-    });
-
-  const cycleRecurrence = (id: string) =>
-    onUpdate({
-      ...entry,
-      checklist: checklist.map((c) =>
-        c.id === id ? { ...c, recurrence: nextRecurrence(c.recurrence) } : c,
-      ),
-    });
-
-  const remove = (id: string) =>
-    onUpdate({ ...entry, checklist: checklist.filter((c) => c.id !== id) });
-
-  const openCount = checklist.filter((c) => !c.done).length;
-
-  return (
-    <Modal title={entry.title} onClose={onClose}>
-      <div className="field">
-        <label>Your rating</label>
-        <StarRating value={entry.score} onChange={onRate} />
-      </div>
-      {entry.seasons?.length ? (
-        <div className="field">
-          <label>
-            Seasons ({entry.progress}/{entry.total} episodes)
-          </label>
-          <div className="detail-seasons">
-            {entry.seasons.map((s) => {
-              const full = s.watched >= s.episodes;
-              return (
-                <div key={s.season} className={`season-row ${full ? "done" : ""}`}>
-                  <span className="season-name" title={s.name}>
-                    {s.name}
-                  </span>
-                  <div className="season-controls">
-                    <button
-                      className="btn ghost icon"
-                      title="One fewer"
-                      disabled={s.watched <= 0}
-                      onClick={() => onUpdate(setSeasonWatched(entry, s.season, s.watched - 1))}
-                    >
-                      −
-                    </button>
-                    <span className="season-count">
-                      {s.watched}/{s.episodes}
-                    </span>
-                    <button
-                      className="btn ghost icon"
-                      title="One more"
-                      disabled={full}
-                      onClick={() => onUpdate(setSeasonWatched(entry, s.season, s.watched + 1))}
-                    >
-                      +
-                    </button>
-                    <button
-                      className="btn ghost season-done"
-                      title={full ? "Clear season" : "Mark season watched"}
-                      onClick={() =>
-                        onUpdate(setSeasonWatched(entry, s.season, full ? 0 : s.episodes))
-                      }
-                    >
-                      {full ? "clear" : "all"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-      <div className="field">
-        <label>Notes</label>
-        <textarea
-          className="input detail-notes"
-          rows={5}
-          placeholder="Anything worth remembering — where you left off, a boss strategy, a link…"
-          defaultValue={entry.notes ?? ""}
-          onBlur={(e) => {
-            const notes = e.target.value.trim();
-            if (notes !== (entry.notes ?? "")) onUpdate({ ...entry, notes: notes || undefined });
-          }}
-        />
-      </div>
-      <div className="field">
-        <label>
-          Checklist{checklist.length > 0 ? ` (${openCount} left)` : ""}
-        </label>
-        <div className="detail-checklist">
-          {checklist.map((c) => (
-            <div key={c.id} className={`detail-check ${c.done ? "done" : ""}`}>
-              <button
-                className={`check-box ${c.done ? "checked" : ""}`}
-                title={c.done ? "Mark undone" : "Mark done"}
-                onClick={() => toggle(c.id)}
-              >
-                {c.done ? IC.check : null}
-              </button>
-              <span className="detail-check-text">{c.text}</span>
-              {c.recurrence && c.recurrence !== "none" && (
-                <span className="detail-check-repeat">
-                  {IC.refresh} {RECURRENCE_LABEL[c.recurrence]}
-                </span>
-              )}
-              <button
-                className={`btn ghost icon ${
-                  c.recurrence && c.recurrence !== "none" ? "repeat-on" : ""
-                }`}
-                title={
-                  c.recurrence && c.recurrence !== "none"
-                    ? `Repeats ${RECURRENCE_LABEL[c.recurrence]} — click to change`
-                    : "Make this repeat"
-                }
-                onClick={() => cycleRecurrence(c.id)}
-              >
-                {IC.refresh}
-              </button>
-              <button
-                className={`btn ghost icon ${
-                  isFocused({ kind: "task", id: c.id, parentId: entry.id }) ? "focused" : ""
-                }`}
-                title="Focus on this task"
-                onClick={() => focusNow({ kind: "task", id: c.id, parentId: entry.id })}
-              >
-                {IC.target}
-              </button>
-              <button
-                className="btn ghost icon danger"
-                title="Remove"
-                onClick={() => remove(c.id)}
-              >
-                {IC.close}
-              </button>
-            </div>
-          ))}
-          <div className="detail-check-add">
-            <input
-              className="input detail-check-input"
-              placeholder="Add a task… (Enter)"
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addItem();
-              }}
-            />
-            <div className="detail-check-add-row">
-              <select
-                className="input detail-check-recur"
-                value={newRecurrence}
-                title="How often this task repeats"
-                onChange={(e) => setNewRecurrence(e.target.value as Recurrence)}
-              >
-                <option value="none">once</option>
-                <option value="daily">repeats daily</option>
-                <option value="weekly">repeats weekly</option>
-              </select>
-              <button className="btn" disabled={!newItem.trim()} onClick={addItem}>
-                {IC.plus} Add
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 function MediaCard({
   entry,
+  statuses,
   hoursMode,
   movie,
   installed,
@@ -601,19 +516,28 @@ function MediaCard({
   onRate,
   onToggleTask,
   onDetails,
+  onEdit,
   onDelete,
+  selectMode,
+  selected,
+  onToggleSelected,
 }: {
   entry: MediaEntry;
+  statuses: string[];
   hoursMode: boolean;
   movie?: boolean;
   installed?: boolean;
   onBump: () => void;
   onLaunch: () => void;
-  onStatus: (s: MediaStatus) => void;
+  onStatus: (s: string) => void;
   onRate: (score: number | undefined) => void;
   onToggleTask: (itemId: string) => void;
   onDetails: () => void;
+  onEdit: () => void;
   onDelete: () => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelected?: () => void;
 }) {
   const { focusNow, isFocused } = useFocusActions();
   const open = entry.checklist?.filter((c) => !c.done) ?? [];
@@ -622,7 +546,12 @@ function MediaCard({
   const annotated = hasNotes || (entry.checklist?.length ?? 0) > 0;
 
   return (
-    <div className={`media-card status-${entry.status.toLowerCase()}`}>
+    <div className={`media-card status-${entry.status.toLowerCase()} ${selected ? "selected" : ""}`}>
+      {selectMode && (
+        <label className="media-card-select">
+          <input type="checkbox" checked={selected ?? false} onChange={onToggleSelected} />
+        </label>
+      )}
       <div className="media-card-main">
         {entry.coverUrl ? (
           <img
@@ -667,13 +596,15 @@ function MediaCard({
           <select
             className="input media-status"
             value={entry.status}
-            onChange={(e) => onStatus(e.target.value as MediaStatus)}
+            onChange={(e) => onStatus(e.target.value)}
           >
-            {MEDIA_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.toLowerCase()}
-              </option>
-            ))}
+            {(statuses.includes(entry.status) ? statuses : [entry.status, ...statuses]).map(
+              (s) => (
+                <option key={s} value={s}>
+                  {s.toLowerCase()}
+                </option>
+              ),
+            )}
           </select>
           <button
             className={`btn ghost icon detail-btn ${annotated ? "annotated" : ""}`}
@@ -682,6 +613,13 @@ function MediaCard({
           >
             {IC.note}
             {openTasks > 0 && <span className="detail-badge">{openTasks}</span>}
+          </button>
+          <button
+            className="btn ghost icon"
+            title="Edit entry"
+            onClick={onEdit}
+          >
+            {IC.edit}
           </button>
           <button
             className={`btn ghost icon ${isFocused({ kind: "media", id: entry.id }) ? "focused" : ""}`}
@@ -981,125 +919,5 @@ function TmdbSearch({
         </div>
       )}
     </div>
-  );
-}
-
-function AddCategoryModal({
-  onClose,
-  onSave,
-}: {
-  onClose: () => void;
-  onSave: (name: string) => void;
-}) {
-  const [name, setName] = useState("");
-  return (
-    <Modal title="Add category" onClose={onClose}>
-      <div className="field">
-        <label>Category name</label>
-        <input
-          className="input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Books, Podcasts, …"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && name.trim()) onSave(name.trim());
-          }}
-        />
-      </div>
-      <div className="modal-actions">
-        <button className="btn primary" disabled={!name.trim()} onClick={() => onSave(name.trim())}>
-          Add
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function ManualEntryModal({
-  categoryId,
-  withLaunch,
-  onClose,
-  onSave,
-}: {
-  categoryId: string;
-  withLaunch: boolean;
-  onClose: () => void;
-  onSave: (e: MediaEntry) => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [total, setTotal] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
-  const [launchCommand, setLaunchCommand] = useState("");
-  const [status, setStatus] = useState<MediaStatus>("PLANNING");
-
-  return (
-    <Modal title="Add entry" onClose={onClose}>
-      <div className="field">
-        <label>Title</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-      </div>
-      <div className="field">
-        <label>{withLaunch ? "Total (optional)" : "Total episodes / parts (optional)"}</label>
-        <input
-          className="input"
-          type="number"
-          min="1"
-          value={total}
-          onChange={(e) => setTotal(e.target.value)}
-        />
-      </div>
-      <div className="field">
-        <label>Cover image URL (optional)</label>
-        <input
-          className="input"
-          value={coverUrl}
-          onChange={(e) => setCoverUrl(e.target.value)}
-          placeholder="https://…"
-        />
-      </div>
-      {withLaunch && (
-        <div className="field">
-          <label>Launch command (optional)</label>
-          <input
-            className="input"
-            value={launchCommand}
-            onChange={(e) => setLaunchCommand(e.target.value)}
-            placeholder="hydra, xdg-open steam://rungameid/…, an-anime-game-launcher"
-          />
-        </div>
-      )}
-      <div className="field">
-        <label>Status</label>
-        <select className="input" value={status} onChange={(e) => setStatus(e.target.value as MediaStatus)}>
-          {MEDIA_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.toLowerCase()}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="modal-actions">
-        <button
-          className="btn primary"
-          disabled={!title.trim()}
-          onClick={() =>
-            onSave({
-              id: uid(),
-              categoryId,
-              title: title.trim(),
-              progress: 0,
-              total: total ? Number(total) : null,
-              coverUrl: coverUrl.trim() || undefined,
-              launchCommand: launchCommand.trim() || undefined,
-              status,
-              completedAt: status === "COMPLETED" ? localDate() : undefined,
-            })
-          }
-        >
-          Add
-        </button>
-      </div>
-    </Modal>
   );
 }
