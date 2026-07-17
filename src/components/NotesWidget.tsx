@@ -3,7 +3,7 @@ import type { Note } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
-import { appendToInbox } from "../lib/obsidian";
+import { saveNoteToVault } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import "./NotesWidget.css";
 
@@ -33,7 +33,11 @@ export function NotesWidget({ onOpen }: { onOpen: () => void }) {
     dispatch({ type: "note/add", note });
     setText("");
     if (data.settings.vaultPath) {
-      appendToInbox(data.settings, t).catch((e) => flash(`Vault sync failed: ${e}`));
+      saveNoteToVault(data.settings, note)
+        .then((path) =>
+          dispatch({ type: "note/update", note: { ...note, vaultFile: path } }),
+        )
+        .catch((e) => flash(`Vault sync failed: ${e}`));
     }
   };
 

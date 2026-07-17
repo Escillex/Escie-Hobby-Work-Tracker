@@ -215,12 +215,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
       <div className="field">
-        <label>Inbox note (captured notes get appended here)</label>
+        <label>Notes folder (captured thoughts and exported notes land here)</label>
         <input
           className="input"
-          defaultValue={s.vaultInboxNote ?? ""}
-          placeholder="Hyperfocus Inbox.md"
-          onBlur={(e) => set({ vaultInboxNote: e.target.value.trim() || undefined })}
+          defaultValue={s.vaultNotesFolder ?? ""}
+          placeholder="Hyperfocus"
+          onBlur={(e) => set({ vaultNotesFolder: e.target.value.trim() || undefined })}
         />
       </div>
 
