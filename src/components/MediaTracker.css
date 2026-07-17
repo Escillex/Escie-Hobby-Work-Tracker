@@ -99,6 +99,22 @@
   border-radius: 4px;
 }
 
+.media-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rp-iris) 12%, var(--rp-overlay));
+  border: 1px solid color-mix(in srgb, var(--rp-iris) 30%, transparent);
+  font-size: 0.85rem;
+}
+
+.media-bulk-status {
+  width: auto;
+}
+
 .media-grid-wrap {
   overflow-y: auto;
   min-height: 0;
@@ -140,6 +156,7 @@
 }
 
 .media-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -149,6 +166,24 @@
   border: 1px solid transparent;
   transition: transform 0.18s var(--ease), border-color 0.18s var(--ease),
     box-shadow 0.18s var(--ease);
+}
+
+.media-card.selected {
+  border-color: var(--rp-iris);
+  box-shadow: 0 0 0 1px var(--rp-iris);
+}
+
+.media-card-select {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 2;
+}
+
+.media-card-select input {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
 }
 
 .media-card-main {

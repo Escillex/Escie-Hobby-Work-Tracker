@@ -138,6 +138,36 @@ function CategoryView({
   const editEntry = entries.find((e) => e.id === editId) ?? null;
   const [installed, setInstalled] = useState<Set<number> | null>(null);
   const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const clearSelection = () => setSelected(new Set());
+  const selectAll = () => setSelected(new Set(visible.map((e) => e.id)));
+
+  const bulkStatus = (status: string) => {
+    for (const e of visible) {
+      if (selected.has(e.id)) dispatch({ type: "media/update", entry: { ...e, status } });
+    }
+    clearSelection();
+  };
+  const bulkInstalled = (installedFlag: boolean) => {
+    for (const e of visible) {
+      if (selected.has(e.id))
+        dispatch({ type: "media/update", entry: { ...e, installed: installedFlag || undefined } });
+    }
+    clearSelection();
+  };
+  const bulkDelete = () => {
+    if (!confirm(`Delete ${selected.size} selected?`)) return;
+    for (const id of selected) dispatch({ type: "media/delete", id });
+    clearSelection();
+  };
 
   // Detect locally-installed Steam games when the Games tab is shown.
   useEffect(() => {
@@ -340,7 +370,59 @@ function CategoryView({
             {IC.plus} Add {category.name.replace(/s$/, "").toLowerCase()}
           </button>
         )}
+        <button
+          className={`btn ghost ${selectMode ? "active" : ""}`}
+          title="Select multiple"
+          onClick={() => {
+            setSelectMode((v) => !v);
+            clearSelection();
+          }}
+        >
+          {IC.check} Select
+        </button>
       </div>
+
+      {selectMode && selected.size > 0 && (
+        <div className="media-bulk-bar">
+          <span>{selected.size} selected</span>
+          <select
+            className="input media-bulk-status"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value) bulkStatus(e.target.value);
+              e.target.value = "";
+            }}
+          >
+            <option value="" disabled>
+              Set status...
+            </option>
+            {statusesFor(category).map((s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          {isGames && (
+            <>
+              <button className="btn ghost" onClick={() => bulkInstalled(true)}>
+                Mark installed
+              </button>
+              <button className="btn ghost" onClick={() => bulkInstalled(false)}>
+                Mark not installed
+              </button>
+            </>
+          )}
+          <button className="btn ghost danger" onClick={bulkDelete}>
+            Delete
+          </button>
+          <button className="btn ghost" onClick={selectAll}>
+            Select all
+          </button>
+          <button className="btn ghost" onClick={clearSelection}>
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="media-grid-wrap">
         {visible.length === 0 && (
@@ -375,6 +457,9 @@ function CategoryView({
                   onDetails={() => setDetailId(e.id)}
                   onEdit={() => setEditId(e.id)}
                   onDelete={() => dispatch({ type: "media/delete", id: e.id })}
+                  selectMode={selectMode}
+                  selected={selected.has(e.id)}
+                  onToggleSelected={() => toggleSelected(e.id)}
                 />
               ))}
             </div>
@@ -430,6 +515,9 @@ function MediaCard({
   onDetails,
   onEdit,
   onDelete,
+  selectMode,
+  selected,
+  onToggleSelected,
 }: {
   entry: MediaEntry;
   hoursMode: boolean;
@@ -443,6 +531,9 @@ function MediaCard({
   onDetails: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelected?: () => void;
 }) {
   const { focusNow, isFocused } = useFocusActions();
   const open = entry.checklist?.filter((c) => !c.done) ?? [];
@@ -451,7 +542,12 @@ function MediaCard({
   const annotated = hasNotes || (entry.checklist?.length ?? 0) > 0;
 
   return (
-    <div className={`media-card status-${entry.status.toLowerCase()}`}>
+    <div className={`media-card status-${entry.status.toLowerCase()} ${selected ? "selected" : ""}`}>
+      {selectMode && (
+        <label className="media-card-select">
+          <input type="checkbox" checked={selected ?? false} onChange={onToggleSelected} />
+        </label>
+      )}
       <div className="media-card-main">
         {entry.coverUrl ? (
           <img
