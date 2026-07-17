@@ -4,7 +4,7 @@ import type { Note } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
-import { promoteNoteToVault } from "../lib/obsidian";
+import { saveNoteToVault, openNoteInObsidian } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import { ObsidianPanel } from "./ObsidianPanel";
 import "./NotesView.css";
@@ -48,11 +48,13 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const toVault = async () => {
     if (!selected) return;
     try {
-      await promoteNoteToVault(
-        data.settings,
-        selected.title || "Untitled",
-        selected.body,
-      );
+      const path = await saveNoteToVault(data.settings, selected);
+      dispatch({
+        type: "note/patch",
+        id: selected.id,
+        patch: { vaultFile: path, vaultTitle: selected.title },
+      });
+      await openNoteInObsidian(path);
       flash("Saved to vault and opened in Obsidian");
     } catch (e) {
       flash(`${e}`);

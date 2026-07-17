@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -30,27 +28,32 @@ fn launch_app(command: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to launch `{trimmed}`: {e}"))
 }
 
-/// Append a line to a note file (created if missing) — used for the
-/// Obsidian inbox sync.
+/// Overwrite a markdown note at an exact path — used when re-exporting a
+/// note to the file it was previously written to. Creates parent dirs.
+/// Only plain `.md` paths are accepted, so a compromised webview cannot use
+/// this as a general file-write primitive.
 #[tauri::command]
-fn append_note(path: String, content: String) -> Result<(), String> {
+fn write_note(path: String, content: String) -> Result<(), String> {
     let p = PathBuf::from(&path);
+    if p.extension().and_then(|e| e.to_str()) != Some("md") {
+        return Err(format!("Refusing to write non-markdown file: {path}"));
+    }
+    if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        return Err(format!("Refusing path with parent components: {path}"));
+    }
     if let Some(dir) = p.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&p)
-        .map_err(|e| format!("Cannot open {path}: {e}"))?;
-    file.write_all(content.as_bytes())
-        .map_err(|e| e.to_string())
+    std::fs::write(&p, content).map_err(|e| format!("Cannot write {path}: {e}"))
 }
 
 /// Create a new markdown note, adding a numeric suffix instead of
 /// clobbering an existing file. Returns the path that was written.
 #[tauri::command]
 fn create_note(dir: String, filename: String, content: String) -> Result<String, String> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err(format!("Refusing filename with path components: {filename}"));
+    }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let base = filename.trim_end_matches(".md");
     let mut path = PathBuf::from(&dir).join(format!("{base}.md"));
@@ -153,7 +156,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             launch_app,
-            append_note,
+            write_note,
             create_note,
             installed_steam_appids,
             obsidian_status

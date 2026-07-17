@@ -4,6 +4,7 @@ import {
   canCustomizeStatuses,
   isEntryInstalled,
   groupByStatus,
+  filterEntries,
 } from "./media";
 import { MEDIA_STATUSES } from "./types";
 import type { MediaCategory, MediaEntry } from "./types";
@@ -80,5 +81,50 @@ describe("groupByStatus", () => {
     const g = groupByStatus(es, ["PLANNING"]);
     expect(g.map((x) => x.status)).toEqual(["PLANNING", "Other"]);
     expect(g[1].entries).toHaveLength(1);
+  });
+});
+
+describe("filterEntries", () => {
+  const all = { status: null, query: "", minRating: null };
+  const es = [
+    entry({ id: "1", title: "Hades", status: "Playing", score: 5 }),
+    entry({ id: "2", title: "Hollow Knight", status: "Backlog", score: 3 }),
+    entry({ id: "3", title: "Celeste", status: "WEIRD" }),
+  ];
+  const statuses = ["Playing", "Backlog"];
+
+  it("passes everything through with the empty filter", () => {
+    expect(filterEntries(es, all, statuses)).toHaveLength(3);
+  });
+  it("filters by exact status", () => {
+    const r = filterEntries(es, { ...all, status: "Playing" }, statuses);
+    expect(r.map((e) => e.id)).toEqual(["1"]);
+  });
+  it("resolves Other to statuses outside the category list", () => {
+    const r = filterEntries(es, { ...all, status: "Other" }, statuses);
+    expect(r.map((e) => e.id)).toEqual(["3"]);
+  });
+  it("matches title case-insensitively as a substring", () => {
+    const r = filterEntries(es, { ...all, query: "  hOLLoW " }, statuses);
+    expect(r.map((e) => e.id)).toEqual(["2"]);
+  });
+  it("filters by minimum rating and treats 0 as unrated-only", () => {
+    expect(
+      filterEntries(es, { ...all, minRating: 4 }, statuses).map((e) => e.id),
+    ).toEqual(["1"]);
+    expect(
+      filterEntries(es, { ...all, minRating: 0 }, statuses).map((e) => e.id),
+    ).toEqual(["3"]);
+  });
+  it("ANDs filters together", () => {
+    const r = filterEntries(
+      es,
+      { status: "Playing", query: "hades", minRating: 5 },
+      statuses,
+    );
+    expect(r.map((e) => e.id)).toEqual(["1"]);
+    expect(
+      filterEntries(es, { status: "Backlog", query: "hades", minRating: null }, statuses),
+    ).toHaveLength(0);
   });
 });

@@ -321,3 +321,194 @@ Expected: all clean, 18/18 tests.
 git add src/components/MediaTracker.tsx src/components/MediaTracker.css
 git commit -m "Add status, title, and rating filters to media tabs"
 ```
+
+---
+
+### Task 3: Collapsible filter row and status sections
+
+(Added after user feedback on Task 2: "should be a collapsable dropdown menu" — both the filter controls and the status groups collapse.)
+
+**Files:**
+- Modify: `src/components/MediaTracker.tsx`
+- Modify: `src/components/MediaTracker.css`
+
+**Interfaces:**
+- Consumes: Task 2's `filter` state, filter row JSX, and `groups` render; `IC.next` from `../lib/icons` (already imported as `IC`).
+- Produces: nothing consumed later.
+
+- [ ] **Step 1: Add toggle state to `CategoryView`**
+
+Next to the `filter` useState hook from Task 2, add:
+
+```tsx
+  const [showFilters, setShowFilters] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (status: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(status) ? next.delete(status) : next.add(status);
+      return next;
+    });
+```
+
+And just above the `return`, after the `visible` pipeline:
+
+```tsx
+  const filterActive =
+    filter.status != null || filter.query.trim() !== "" || filter.minRating != null;
+```
+
+- [ ] **Step 2: Put the filter row behind a toolbar toggle**
+
+At the end of `media-toolbar`, immediately BEFORE the existing Select button (`MediaTracker.tsx:388`), add:
+
+```tsx
+        <button
+          className={`btn ghost media-filter-toggle ${filterActive ? "filters-active" : ""}`}
+          title={showFilters ? "Hide filters" : "Show filters"}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          Filter
+        </button>
+```
+
+Change the filter row's render condition (`MediaTracker.tsx:400`) from:
+
+```tsx
+      {entries.length > 0 && (
+        <div className="media-filter-row">
+```
+
+to:
+
+```tsx
+      {showFilters && entries.length > 0 && (
+        <div className="media-filter-row">
+```
+
+Filters stay active while the row is hidden — the `filters-active` accent on the button is the signal that a filter is narrowing the view.
+
+- [ ] **Step 3: Make status section headers collapsible**
+
+In the `groups.map(...)` render, replace the plain heading:
+
+```tsx
+            <h3 className="media-group-head">{group.status.toLowerCase()}</h3>
+```
+
+with a toggle button and gate the grid on the collapsed set:
+
+```tsx
+            <button
+              className="media-group-head"
+              title={collapsedGroups.has(group.status) ? "Expand section" : "Collapse section"}
+              onClick={() => toggleGroup(group.status)}
+            >
+              <span
+                className={`media-group-chevron ${collapsedGroups.has(group.status) ? "closed" : ""}`}
+              >
+                {IC.next}
+              </span>
+              {group.status.toLowerCase()}
+              <span className="media-group-count">{group.entries.length}</span>
+            </button>
+```
+
+and wrap the grid `<div className="media-grid">...</div>` (contents unchanged) in:
+
+```tsx
+            {!collapsedGroups.has(group.status) && (
+              <div className="media-grid">
+                ...existing MediaCard map unchanged...
+              </div>
+            )}
+```
+
+- [ ] **Step 4: CSS**
+
+In `src/components/MediaTracker.css`, REPLACE the existing `.media-group-head` rule (it currently styles an `h3`) with the button version, and add the new rules:
+
+```css
+.media-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rp-muted);
+  margin: 0;
+  padding: 0 0 0.15rem;
+  text-align: left;
+}
+
+.media-group-head:hover {
+  color: var(--rp-text);
+}
+
+.media-group-chevron {
+  display: inline-block;
+  font-size: 0.7rem;
+  transform: rotate(90deg);
+  transition: transform 0.15s var(--ease);
+}
+
+.media-group-chevron.closed {
+  transform: none;
+}
+
+.media-group-count {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--rp-subtle);
+}
+
+.media-filter-toggle.filters-active {
+  color: var(--rp-iris);
+}
+```
+
+Also fix the filter-row control widths (observed in a live smoke: the two selects
+render full-width and stack, because the shared `.input` class sets `width: 100%`
+and wins over the Task 2 rules). REPLACE Task 2's three width rules
+(`.media-filter-status, .media-filter-rating { width: auto }` and the
+`.media-filter-query` block) with scoped rules that beat `.input`:
+
+```css
+.media-filter-row .media-filter-status,
+.media-filter-row .media-filter-rating {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.media-filter-row .media-filter-query {
+  width: auto;
+  flex: 1;
+  min-width: 8rem;
+  max-width: 16rem;
+}
+```
+
+- [ ] **Step 5: Verify typecheck, build, tests**
+
+Run: `pnpm exec tsc --noEmit && pnpm exec vite build && pnpm exec vitest run`
+Expected: all clean (tests unchanged — this task is view state only).
+
+- [ ] **Step 6: Manual smoke**
+
+`pnpm tauri dev`: Filter button shows/hides the row; setting a filter then hiding the row keeps cards filtered and tints the button; clicking a section header collapses it (chevron rotates, count stays visible); collapsed state resets on tab switch. (If you cannot drive the GUI in this session, skip and note it — verify via typecheck/build instead.)
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/components/MediaTracker.tsx src/components/MediaTracker.css
+git commit -m "Make filter row and status sections collapsible"
+```

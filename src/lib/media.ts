@@ -73,3 +73,39 @@ export function groupByStatus(
   if (other.length) result.push({ status: "Other", entries: other });
   return result;
 }
+
+export interface MediaFilter {
+  /** null = all statuses; "Other" = statuses outside the category's list. */
+  status: string | null;
+  /** Case-insensitive title substring; empty disables. */
+  query: string;
+  /** null = any; 0 = unrated only; 1-5 = score >= n. */
+  minRating: number | null;
+}
+
+/** Narrow entries by status, title substring, and rating (AND-combined). */
+export function filterEntries(
+  entries: MediaEntry[],
+  filter: MediaFilter,
+  statuses: string[],
+): MediaEntry[] {
+  const q = filter.query.trim().toLowerCase();
+  return entries.filter((e) => {
+    if (filter.status != null) {
+      if (filter.status === "Other") {
+        if (statuses.includes(e.status)) return false;
+      } else if (e.status !== filter.status) {
+        return false;
+      }
+    }
+    if (q && !e.title.toLowerCase().includes(q)) return false;
+    if (filter.minRating != null) {
+      if (filter.minRating === 0) {
+        if (e.score != null) return false;
+      } else if (e.score == null || e.score < filter.minRating) {
+        return false;
+      }
+    }
+    return true;
+  });
+}

@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { uid } from "../lib/types";
-import { toggleChecklistItem, isEntryInstalled, groupByStatus, statusesFor } from "../lib/media";
+import {
+  toggleChecklistItem,
+  isEntryInstalled,
+  groupByStatus,
+  statusesFor,
+  filterEntries,
+  type MediaFilter,
+} from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -140,6 +147,20 @@ function CategoryView({
   const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<MediaFilter>({
+    status: null,
+    query: "",
+    minRating: null,
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (status: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(status) ? next.delete(status) : next.add(status);
+      return next;
+    });
 
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
@@ -303,7 +324,7 @@ function CategoryView({
 
   const isInstalled = (e: MediaEntry) => isEntryInstalled(e, installed);
 
-  const visible =
+  const installFiltered =
     isGames && installFilter !== "all"
       ? entries.filter((e) =>
           installFilter === "installed" ? isInstalled(e) : !isInstalled(e),
@@ -311,7 +332,12 @@ function CategoryView({
       : entries;
 
   const statuses = statusesFor(category);
+  const hasOther = installFiltered.some((e) => !statuses.includes(e.status));
+  const visible = filterEntries(installFiltered, filter, statuses);
   const groups = groupByStatus(visible, statuses);
+
+  const filterActive =
+    filter.status != null || filter.query.trim() !== "" || filter.minRating != null;
 
   return (
     <div className="media-body">
@@ -372,6 +398,13 @@ function CategoryView({
           </button>
         )}
         <button
+          className={`btn ghost media-filter-toggle ${filterActive ? "filters-active" : ""}`}
+          title={showFilters ? "Hide filters" : "Show filters"}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          Filter
+        </button>
+        <button
           className={`btn ghost ${selectMode ? "active" : ""}`}
           title="Select multiple"
           onClick={() => {
@@ -382,6 +415,48 @@ function CategoryView({
           {IC.check} Select
         </button>
       </div>
+
+      {showFilters && entries.length > 0 && (
+        <div className="media-filter-row">
+          <select
+            className="input media-filter-status"
+            value={filter.status ?? ""}
+            onChange={(e) => setFilter({ ...filter, status: e.target.value || null })}
+          >
+            <option value="">all statuses</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase()}
+              </option>
+            ))}
+            {hasOther && <option value="Other">other</option>}
+          </select>
+          <input
+            className="input media-filter-query"
+            placeholder="Filter by title"
+            value={filter.query}
+            onChange={(e) => setFilter({ ...filter, query: e.target.value })}
+          />
+          <select
+            className="input media-filter-rating"
+            value={filter.minRating == null ? "" : String(filter.minRating)}
+            onChange={(e) =>
+              setFilter({
+                ...filter,
+                minRating: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+          >
+            <option value="">any rating</option>
+            <option value="5">5</option>
+            <option value="4">4+</option>
+            <option value="3">3+</option>
+            <option value="2">2+</option>
+            <option value="1">1+</option>
+            <option value="0">unrated</option>
+          </select>
+        </div>
+      )}
 
       {selectMode && selected.size > 0 && (
         <div className="media-bulk-bar">
@@ -428,43 +503,60 @@ function CategoryView({
       <div className="media-grid-wrap">
         {visible.length === 0 && (
           <p className="media-empty">
-            {isAniList
-              ? "Search above to add something, or hit Sync to pull your AniList."
-              : isGames
-                ? entries.length > 0
-                  ? "No games match this filter."
-                  : "Search games, import your Steam library, or add one manually."
-                : isTmdb
-                  ? `Search for a ${isMovie ? "movie" : "show"} above, or add one manually.`
-                  : "Nothing here yet — add your first one."}
+            {entries.length > 0
+              ? "Nothing matches the current filters."
+              : isAniList
+                ? "Search above to add something, or hit Sync to pull your AniList."
+                : isGames
+                  ? "Search games, import your Steam library, or add one manually."
+                  : isTmdb
+                    ? `Search for a ${isMovie ? "movie" : "show"} above, or add one manually.`
+                    : "Nothing here yet — add your first one."}
           </p>
         )}
         {groups.map((group) => (
           <section key={group.status} className="media-group">
-            <h3 className="media-group-head">{group.status.toLowerCase()}</h3>
-            <div className="media-grid">
-              {group.entries.map((e) => (
-                <MediaCard
-                  key={e.id}
-                  entry={e}
-                  statuses={statuses}
-                  hoursMode={isGames}
-                  movie={isMovie}
-                  installed={isGames ? isInstalled(e) : undefined}
-                  onBump={() => bump(e)}
-                  onLaunch={() => launch(e)}
-                  onStatus={(s) => setStatus(e, s)}
-                  onRate={(score) => rate(e, score)}
-                  onToggleTask={(itemId) => toggleTask(e, itemId)}
-                  onDetails={() => setDetailId(e.id)}
-                  onEdit={() => setEditId(e.id)}
-                  onDelete={() => dispatch({ type: "media/delete", id: e.id })}
-                  selectMode={selectMode}
-                  selected={selected.has(e.id)}
-                  onToggleSelected={() => toggleSelected(e.id)}
-                />
-              ))}
-            </div>
+            <h3 className="media-group-title">
+              <button
+                className="media-group-head"
+                title={collapsedGroups.has(group.status) ? "Expand section" : "Collapse section"}
+                aria-expanded={!collapsedGroups.has(group.status)}
+                onClick={() => toggleGroup(group.status)}
+              >
+                <span
+                  className={`media-group-chevron ${collapsedGroups.has(group.status) ? "closed" : ""}`}
+                >
+                  {IC.next}
+                </span>
+                {group.status.toLowerCase()}
+                <span className="media-group-count">{group.entries.length}</span>
+              </button>
+            </h3>
+            {!collapsedGroups.has(group.status) && (
+              <div className="media-grid">
+                {group.entries.map((e) => (
+                  <MediaCard
+                    key={e.id}
+                    entry={e}
+                    statuses={statuses}
+                    hoursMode={isGames}
+                    movie={isMovie}
+                    installed={isGames ? isInstalled(e) : undefined}
+                    onBump={() => bump(e)}
+                    onLaunch={() => launch(e)}
+                    onStatus={(s) => setStatus(e, s)}
+                    onRate={(score) => rate(e, score)}
+                    onToggleTask={(itemId) => toggleTask(e, itemId)}
+                    onDetails={() => setDetailId(e.id)}
+                    onEdit={() => setEditId(e.id)}
+                    onDelete={() => dispatch({ type: "media/delete", id: e.id })}
+                    selectMode={selectMode}
+                    selected={selected.has(e.id)}
+                    onToggleSelected={() => toggleSelected(e.id)}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         ))}
       </div>

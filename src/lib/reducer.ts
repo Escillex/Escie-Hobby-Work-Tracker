@@ -24,6 +24,7 @@ export type Action =
   | { type: "media/delete"; id: string }
   | { type: "note/add"; note: Note }
   | { type: "note/update"; note: Note }
+  | { type: "note/patch"; id: string; patch: Partial<Note> }
   | { type: "note/delete"; id: string }
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
@@ -126,6 +127,13 @@ export function reducer(state: AppData, action: Action): AppData {
         ...state,
         notes: state.notes.map((n) =>
           n.id === action.note.id ? action.note : n,
+        ),
+      };
+    case "note/patch":
+      return {
+        ...state,
+        notes: state.notes.map((n) =>
+          n.id === action.id ? { ...n, ...action.patch } : n,
         ),
       };
     case "note/delete":

@@ -101,6 +101,8 @@ export interface Note {
   body: string;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  vaultFile?: string; // vault path this note was last written to
+  vaultTitle?: string; // title the vault file was last written under
 }
 
 export type Recurrence = "none" | "daily" | "weekly";
@@ -135,7 +137,7 @@ export interface Settings {
   tmdbAccountId?: number;
   tmdbUsername?: string;
   vaultPath?: string;
-  vaultInboxNote?: string;
+  vaultNotesFolder?: string;
   fontFamily?: string;
 }
 

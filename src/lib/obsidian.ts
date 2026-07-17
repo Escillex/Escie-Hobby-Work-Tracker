@@ -1,41 +1,38 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { Settings } from "./types";
+import type { Note, Settings } from "./types";
+import { resolveNoteWrite } from "./vaultNotes";
 
-const DEFAULT_INBOX = "Hyperfocus Inbox.md";
+const DEFAULT_FOLDER = "Hyperfocus";
 
-const inboxPath = (s: Settings) =>
-  `${s.vaultPath}/${s.vaultInboxNote?.trim() || DEFAULT_INBOX}`;
+/** The vault folder that receives note files. */
+const notesDir = (s: Settings): string =>
+  `${s.vaultPath}/${s.vaultNotesFolder?.trim() || DEFAULT_FOLDER}`;
 
-/** Append a quickly-captured note title to the vault inbox as a task line. */
-export async function appendToInbox(settings: Settings, text: string): Promise<void> {
-  if (!settings.vaultPath) return;
-  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
-  await invoke("append_note", {
-    path: inboxPath(settings),
-    content: `- [ ] ${text} *(captured ${stamp})*\n`,
+/** Write a note into the vault notes folder as its own markdown file.
+ *  First exports create (dedup-safe); re-exports overwrite the note's own
+ *  file; a renamed note gets a fresh file and the old one is left alone.
+ *  Returns the path written — callers store it back on the note. */
+export async function saveNoteToVault(
+  settings: Settings,
+  note: Note,
+): Promise<string> {
+  if (!settings.vaultPath) throw new Error("No vault folder set");
+  const write = resolveNoteWrite(note.title, note.vaultFile, note.vaultTitle);
+  if (write.action === "overwrite") {
+    await invoke("write_note", { path: write.path, content: note.body });
+    return write.path;
+  }
+  return invoke<string>("create_note", {
+    dir: notesDir(settings),
+    filename: write.filename,
+    content: note.body,
   });
 }
 
-/** Write an in-app note to the vault as a markdown file and open it. */
-export async function promoteNoteToVault(
-  settings: Settings,
-  title: string,
-  body: string,
-): Promise<string> {
-  if (!settings.vaultPath) throw new Error("No vault folder set");
-  const safe =
-    title
-      .slice(0, 60)
-      .replace(/[/\\:*?"<>|#^[\]]/g, "")
-      .trim() || "Untitled";
-  const path = await invoke<string>("create_note", {
-    dir: settings.vaultPath,
-    filename: `${safe}.md`,
-    content: body,
-  });
+/** Open a written note file in Obsidian. */
+export async function openNoteInObsidian(path: string): Promise<void> {
   await openUrl(`obsidian://open?path=${encodeURIComponent(path)}`);
-  return path;
 }
 
 /** Open the vault itself in Obsidian. */
