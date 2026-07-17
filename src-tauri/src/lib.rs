@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -30,21 +28,15 @@ fn launch_app(command: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to launch `{trimmed}`: {e}"))
 }
 
-/// Append a line to a note file (created if missing) — used for the
-/// Obsidian inbox sync.
+/// Overwrite a markdown note at an exact path — used when re-exporting a
+/// note to the file it was previously written to. Creates parent dirs.
 #[tauri::command]
-fn append_note(path: String, content: String) -> Result<(), String> {
+fn write_note(path: String, content: String) -> Result<(), String> {
     let p = PathBuf::from(&path);
     if let Some(dir) = p.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&p)
-        .map_err(|e| format!("Cannot open {path}: {e}"))?;
-    file.write_all(content.as_bytes())
-        .map_err(|e| e.to_string())
+    std::fs::write(&p, content).map_err(|e| format!("Cannot write {path}: {e}"))
 }
 
 /// Create a new markdown note, adding a numeric suffix instead of
@@ -153,7 +145,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             launch_app,
-            append_note,
+            write_note,
             create_note,
             installed_steam_appids,
             obsidian_status
