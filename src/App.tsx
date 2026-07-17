@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppProvider, useApp } from "./lib/state";
 import { useTodoScheduler } from "./lib/useTodoScheduler";
+import { useVaultSync } from "./lib/useVaultSync";
 import { LauncherBar } from "./components/LauncherBar";
 import { NotesWidget } from "./components/NotesWidget";
 import { NowNextCard } from "./components/NowNextCard";
@@ -22,6 +23,7 @@ function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useTodoScheduler();
+  useVaultSync();
 
   // Apply the chosen font family live; fall back to the CSS default.
   useEffect(() => {
