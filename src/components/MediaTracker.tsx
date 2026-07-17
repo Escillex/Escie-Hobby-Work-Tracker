@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { uid } from "../lib/types";
-import { toggleChecklistItem, isEntryInstalled, groupByStatus, statusesFor } from "../lib/media";
+import {
+  toggleChecklistItem,
+  isEntryInstalled,
+  groupByStatus,
+  statusesFor,
+  filterEntries,
+  type MediaFilter,
+} from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -140,6 +147,11 @@ function CategoryView({
   const [installFilter, setInstallFilter] = useState<"all" | "installed" | "not">("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<MediaFilter>({
+    status: null,
+    query: "",
+    minRating: null,
+  });
 
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
@@ -303,7 +315,7 @@ function CategoryView({
 
   const isInstalled = (e: MediaEntry) => isEntryInstalled(e, installed);
 
-  const visible =
+  const installFiltered =
     isGames && installFilter !== "all"
       ? entries.filter((e) =>
           installFilter === "installed" ? isInstalled(e) : !isInstalled(e),
@@ -311,6 +323,8 @@ function CategoryView({
       : entries;
 
   const statuses = statusesFor(category);
+  const hasOther = installFiltered.some((e) => !statuses.includes(e.status));
+  const visible = filterEntries(installFiltered, filter, statuses);
   const groups = groupByStatus(visible, statuses);
 
   return (
@@ -383,6 +397,48 @@ function CategoryView({
         </button>
       </div>
 
+      {entries.length > 0 && (
+        <div className="media-filter-row">
+          <select
+            className="input media-filter-status"
+            value={filter.status ?? ""}
+            onChange={(e) => setFilter({ ...filter, status: e.target.value || null })}
+          >
+            <option value="">all statuses</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase()}
+              </option>
+            ))}
+            {hasOther && <option value="Other">other</option>}
+          </select>
+          <input
+            className="input media-filter-query"
+            placeholder="Filter by title"
+            value={filter.query}
+            onChange={(e) => setFilter({ ...filter, query: e.target.value })}
+          />
+          <select
+            className="input media-filter-rating"
+            value={filter.minRating == null ? "" : String(filter.minRating)}
+            onChange={(e) =>
+              setFilter({
+                ...filter,
+                minRating: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+          >
+            <option value="">any rating</option>
+            <option value="5">5</option>
+            <option value="4">4+</option>
+            <option value="3">3+</option>
+            <option value="2">2+</option>
+            <option value="1">1+</option>
+            <option value="0">unrated</option>
+          </select>
+        </div>
+      )}
+
       {selectMode && selected.size > 0 && (
         <div className="media-bulk-bar">
           <span>{selected.size} selected</span>
@@ -428,15 +484,15 @@ function CategoryView({
       <div className="media-grid-wrap">
         {visible.length === 0 && (
           <p className="media-empty">
-            {isAniList
-              ? "Search above to add something, or hit Sync to pull your AniList."
-              : isGames
-                ? entries.length > 0
-                  ? "No games match this filter."
-                  : "Search games, import your Steam library, or add one manually."
-                : isTmdb
-                  ? `Search for a ${isMovie ? "movie" : "show"} above, or add one manually.`
-                  : "Nothing here yet — add your first one."}
+            {entries.length > 0
+              ? "Nothing matches the current filters."
+              : isAniList
+                ? "Search above to add something, or hit Sync to pull your AniList."
+                : isGames
+                  ? "Search games, import your Steam library, or add one manually."
+                  : isTmdb
+                    ? `Search for a ${isMovie ? "movie" : "show"} above, or add one manually.`
+                    : "Nothing here yet — add your first one."}
           </p>
         )}
         {groups.map((group) => (

@@ -639,3 +639,21 @@
 .entry-form-check input {
   width: auto;
 }
+
+.media-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.media-filter-status,
+.media-filter-rating {
+  width: auto;
+}
+
+.media-filter-query {
+  flex: 1;
+  min-width: 8rem;
+  max-width: 16rem;
+}
