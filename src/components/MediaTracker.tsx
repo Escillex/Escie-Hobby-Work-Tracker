@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
 import { MEDIA_STATUSES, uid } from "../lib/types";
-import { toggleChecklistItem, isEntryInstalled } from "../lib/media";
+import { toggleChecklistItem, isEntryInstalled, groupByStatus, statusesFor } from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
@@ -280,8 +280,7 @@ function CategoryView({
         )
       : entries;
 
-  const current = visible.filter((e) => e.status === "CURRENT" || e.status === "REPEATING");
-  const rest = visible.filter((e) => e.status !== "CURRENT" && e.status !== "REPEATING");
+  const groups = groupByStatus(visible, statusesFor(category));
 
   return (
     <div className="media-body">
@@ -357,22 +356,29 @@ function CategoryView({
                   : "Nothing here yet — add your first one."}
           </p>
         )}
-        {[...current, ...rest].map((e) => (
-          <MediaCard
-            key={e.id}
-            entry={e}
-            hoursMode={isGames}
-            movie={isMovie}
-            installed={isGames ? isInstalled(e) : undefined}
-            onBump={() => bump(e)}
-            onLaunch={() => launch(e)}
-            onStatus={(s) => setStatus(e, s)}
-            onRate={(score) => rate(e, score)}
-            onToggleTask={(itemId) => toggleTask(e, itemId)}
-            onDetails={() => setDetailId(e.id)}
-            onEdit={() => setEditId(e.id)}
-            onDelete={() => dispatch({ type: "media/delete", id: e.id })}
-          />
+        {groups.map((group) => (
+          <section key={group.status} className="media-group">
+            <h3 className="media-group-head">{group.status.toLowerCase()}</h3>
+            <div className="media-grid">
+              {group.entries.map((e) => (
+                <MediaCard
+                  key={e.id}
+                  entry={e}
+                  hoursMode={isGames}
+                  movie={isMovie}
+                  installed={isGames ? isInstalled(e) : undefined}
+                  onBump={() => bump(e)}
+                  onLaunch={() => launch(e)}
+                  onStatus={(s) => setStatus(e, s)}
+                  onRate={(score) => rate(e, score)}
+                  onToggleTask={(itemId) => toggleTask(e, itemId)}
+                  onDetails={() => setDetailId(e.id)}
+                  onEdit={() => setEditId(e.id)}
+                  onDelete={() => dispatch({ type: "media/delete", id: e.id })}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
