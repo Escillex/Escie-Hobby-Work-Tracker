@@ -30,9 +30,17 @@ fn launch_app(command: String) -> Result<(), String> {
 
 /// Overwrite a markdown note at an exact path — used when re-exporting a
 /// note to the file it was previously written to. Creates parent dirs.
+/// Only plain `.md` paths are accepted, so a compromised webview cannot use
+/// this as a general file-write primitive.
 #[tauri::command]
 fn write_note(path: String, content: String) -> Result<(), String> {
     let p = PathBuf::from(&path);
+    if p.extension().and_then(|e| e.to_str()) != Some("md") {
+        return Err(format!("Refusing to write non-markdown file: {path}"));
+    }
+    if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        return Err(format!("Refusing path with parent components: {path}"));
+    }
     if let Some(dir) = p.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
@@ -43,6 +51,9 @@ fn write_note(path: String, content: String) -> Result<(), String> {
 /// clobbering an existing file. Returns the path that was written.
 #[tauri::command]
 fn create_note(dir: String, filename: String, content: String) -> Result<String, String> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err(format!("Refusing filename with path components: {filename}"));
+    }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let base = filename.trim_end_matches(".md");
     let mut path = PathBuf::from(&dir).join(format!("{base}.md"));
