@@ -26,6 +26,7 @@ export type Action =
   | { type: "note/update"; note: Note }
   | { type: "note/patch"; id: string; patch: Partial<Note> }
   | { type: "note/delete"; id: string }
+  | { type: "vault/set-archived"; paths: string[] }
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
@@ -138,6 +139,8 @@ export function reducer(state: AppData, action: Action): AppData {
       };
     case "note/delete":
       return { ...state, notes: state.notes.filter((n) => n.id !== action.id) };
+    case "vault/set-archived":
+      return { ...state, vaultArchived: action.paths };
     case "todo/add":
       return { ...state, todos: [...state.todos, action.todo] };
     case "todo/update":
