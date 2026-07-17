@@ -18,7 +18,7 @@ export async function saveNoteToVault(
   note: Note,
 ): Promise<string> {
   if (!settings.vaultPath) throw new Error("No vault folder set");
-  const write = resolveNoteWrite(note.title, note.vaultFile);
+  const write = resolveNoteWrite(note.title, note.vaultFile, note.vaultTitle);
   if (write.action === "overwrite") {
     await invoke("write_note", { path: write.path, content: note.body });
     return write.path;

@@ -49,7 +49,11 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
     if (!selected) return;
     try {
       const path = await saveNoteToVault(data.settings, selected);
-      dispatch({ type: "note/update", note: { ...selected, vaultFile: path } });
+      dispatch({
+        type: "note/patch",
+        id: selected.id,
+        patch: { vaultFile: path, vaultTitle: selected.title },
+      });
       await openNoteInObsidian(path);
       flash("Saved to vault and opened in Obsidian");
     } catch (e) {

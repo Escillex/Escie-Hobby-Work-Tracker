@@ -35,7 +35,11 @@ export function NotesWidget({ onOpen }: { onOpen: () => void }) {
     if (data.settings.vaultPath) {
       saveNoteToVault(data.settings, note)
         .then((path) =>
-          dispatch({ type: "note/update", note: { ...note, vaultFile: path } }),
+          dispatch({
+            type: "note/patch",
+            id: note.id,
+            patch: { vaultFile: path, vaultTitle: note.title },
+          }),
         )
         .catch((e) => flash(`Vault sync failed: ${e}`));
     }

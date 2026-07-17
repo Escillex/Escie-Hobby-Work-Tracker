@@ -102,6 +102,7 @@ export interface Note {
   createdAt: string; // ISO
   updatedAt: string; // ISO
   vaultFile?: string; // vault path this note was last written to
+  vaultTitle?: string; // title the vault file was last written under
 }
 
 export type Recurrence = "none" | "daily" | "weekly";
