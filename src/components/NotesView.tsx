@@ -16,7 +16,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
   const [preview, setPreview] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const autosaveTimer = useRef<number>(undefined);
+  const autosaveTimers = useRef(new Map<string, number>());
 
   const selected = notes.find((n) => n.id === selectedId) ?? null;
 
@@ -41,12 +41,17 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
     // to the current vaultFile even while a title edit is pending — the
     // rename applies on blur, not per keystroke.
     if (next.vaultFile && p.body !== undefined) {
-      window.clearTimeout(autosaveTimer.current);
       const path = next.vaultFile;
       const body = next.body;
-      autosaveTimer.current = window.setTimeout(() => {
-        overwriteNoteFile(path, body).catch((e) => flash(`Vault write failed: ${e}`));
-      }, 1500);
+      const timers = autosaveTimers.current;
+      window.clearTimeout(timers.get(path));
+      timers.set(
+        path,
+        window.setTimeout(() => {
+          timers.delete(path);
+          overwriteNoteFile(path, body).catch((e) => flash(`Vault write failed: ${e}`));
+        }, 1500),
+      );
     }
   };
 
