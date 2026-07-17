@@ -15,6 +15,7 @@ export function useVaultSync(): void {
   const dataRef = useRef(data);
   dataRef.current = data;
   const running = useRef(false);
+  const pending = useRef(false);
   const { vaultPath, vaultNotesFolder } = data.settings;
 
   useEffect(() => {
@@ -24,7 +25,10 @@ export function useVaultSync(): void {
     let unlisten: (() => void) | undefined;
 
     const reconcile = async () => {
-      if (running.current) return;
+      if (running.current) {
+        pending.current = true;
+        return;
+      }
       running.current = true;
       try {
         const files = await invoke<VaultFileInfo[]>("list_notes", { dir });
@@ -92,6 +96,10 @@ export function useVaultSync(): void {
         console.error("Vault sync failed:", e);
       } finally {
         running.current = false;
+        if (pending.current) {
+          pending.current = false;
+          void reconcile();
+        }
       }
     };
 
