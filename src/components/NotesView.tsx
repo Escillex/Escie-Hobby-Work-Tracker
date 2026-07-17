@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { marked } from "marked";
 import type { Note } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
-import { saveNoteToVault, openNoteInObsidian } from "../lib/obsidian";
+import { saveNoteToVault, openNoteInObsidian, overwriteNoteFile } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import { ObsidianPanel } from "./ObsidianPanel";
 import "./NotesView.css";
@@ -16,6 +16,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
   const [preview, setPreview] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const autosaveTimer = useRef<number>(undefined);
 
   const selected = notes.find((n) => n.id === selectedId) ?? null;
 
@@ -34,10 +35,19 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   const patch = (p: Partial<Note>) => {
     if (!selected) return;
-    dispatch({
-      type: "note/update",
-      note: { ...selected, ...p, updatedAt: new Date().toISOString() },
-    });
+    const next = { ...selected, ...p, updatedAt: new Date().toISOString() };
+    dispatch({ type: "note/update", note: next });
+    // Linked notes auto-save body edits to their file. Deliberately writes
+    // to the current vaultFile even while a title edit is pending — the
+    // rename applies on blur, not per keystroke.
+    if (next.vaultFile && p.body !== undefined) {
+      window.clearTimeout(autosaveTimer.current);
+      const path = next.vaultFile;
+      const body = next.body;
+      autosaveTimer.current = window.setTimeout(() => {
+        overwriteNoteFile(path, body).catch((e) => flash(`Vault write failed: ${e}`));
+      }, 1500);
+    }
   };
 
   const flash = (msg: string) => {
@@ -115,6 +125,24 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 placeholder="Untitled"
                 value={selected.title}
                 onChange={(e) => patch({ title: e.target.value })}
+                onBlur={async () => {
+                  if (!selected.vaultFile || selected.title === selected.vaultTitle) return;
+                  const oldPath = selected.vaultFile;
+                  try {
+                    const path = await saveNoteToVault(data.settings, selected);
+                    dispatch({
+                      type: "note/patch",
+                      id: selected.id,
+                      patch: { vaultFile: path, vaultTitle: selected.title },
+                    });
+                    dispatch({
+                      type: "vault/set-archived",
+                      paths: [...(data.vaultArchived ?? []), oldPath],
+                    });
+                  } catch (e) {
+                    flash(`${e}`);
+                  }
+                }}
               />
               <div className="editor-actions">
                 <button
