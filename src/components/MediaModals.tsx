@@ -284,7 +284,7 @@ export function EntryFormModal({
         progress: 0,
       }),
       title: trimmed,
-      total: total ? Number(total) : isGame ? null : null,
+      total: total ? Number(total) : null,
       coverUrl: coverUrl.trim() || undefined,
       status,
     };

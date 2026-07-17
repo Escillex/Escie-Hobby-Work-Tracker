@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaCategory, MediaEntry, MediaStatus } from "../lib/types";
-import { MEDIA_STATUSES, uid } from "../lib/types";
+import { uid } from "../lib/types";
 import { toggleChecklistItem, isEntryInstalled, groupByStatus, statusesFor } from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
@@ -310,7 +310,8 @@ function CategoryView({
         )
       : entries;
 
-  const groups = groupByStatus(visible, statusesFor(category));
+  const statuses = statusesFor(category);
+  const groups = groupByStatus(visible, statuses);
 
   return (
     <div className="media-body">
@@ -446,6 +447,7 @@ function CategoryView({
                 <MediaCard
                   key={e.id}
                   entry={e}
+                  statuses={statuses}
                   hoursMode={isGames}
                   movie={isMovie}
                   installed={isGames ? isInstalled(e) : undefined}
@@ -504,6 +506,7 @@ function CategoryView({
 
 function MediaCard({
   entry,
+  statuses,
   hoursMode,
   movie,
   installed,
@@ -520,6 +523,7 @@ function MediaCard({
   onToggleSelected,
 }: {
   entry: MediaEntry;
+  statuses: string[];
   hoursMode: boolean;
   movie?: boolean;
   installed?: boolean;
@@ -594,11 +598,13 @@ function MediaCard({
             value={entry.status}
             onChange={(e) => onStatus(e.target.value)}
           >
-            {MEDIA_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.toLowerCase()}
-              </option>
-            ))}
+            {(statuses.includes(entry.status) ? statuses : [entry.status, ...statuses]).map(
+              (s) => (
+                <option key={s} value={s}>
+                  {s.toLowerCase()}
+                </option>
+              ),
+            )}
           </select>
           <button
             className={`btn ghost icon detail-btn ${annotated ? "annotated" : ""}`}
