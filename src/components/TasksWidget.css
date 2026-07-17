@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .tasks-widget .panel-title {
@@ -21,7 +23,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  max-height: 160px;
+  flex: 1;
+  min-height: 3rem;
   overflow-y: auto;
 }
 
