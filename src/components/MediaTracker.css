@@ -131,6 +131,11 @@
   gap: 0.4rem;
 }
 
+.media-group-title {
+  margin: 0;
+  font-size: inherit;
+}
+
 .media-group-head {
   display: flex;
   align-items: center;

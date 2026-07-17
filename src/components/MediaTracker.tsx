@@ -516,19 +516,22 @@ function CategoryView({
         )}
         {groups.map((group) => (
           <section key={group.status} className="media-group">
-            <button
-              className="media-group-head"
-              title={collapsedGroups.has(group.status) ? "Expand section" : "Collapse section"}
-              onClick={() => toggleGroup(group.status)}
-            >
-              <span
-                className={`media-group-chevron ${collapsedGroups.has(group.status) ? "closed" : ""}`}
+            <h3 className="media-group-title">
+              <button
+                className="media-group-head"
+                title={collapsedGroups.has(group.status) ? "Expand section" : "Collapse section"}
+                aria-expanded={!collapsedGroups.has(group.status)}
+                onClick={() => toggleGroup(group.status)}
               >
-                {IC.next}
-              </span>
-              {group.status.toLowerCase()}
-              <span className="media-group-count">{group.entries.length}</span>
-            </button>
+                <span
+                  className={`media-group-chevron ${collapsedGroups.has(group.status) ? "closed" : ""}`}
+                >
+                  {IC.next}
+                </span>
+                {group.status.toLowerCase()}
+                <span className="media-group-count">{group.entries.length}</span>
+              </button>
+            </h3>
             {!collapsedGroups.has(group.status) && (
               <div className="media-grid">
                 {group.entries.map((e) => (
