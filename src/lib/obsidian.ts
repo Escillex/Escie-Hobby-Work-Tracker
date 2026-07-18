@@ -2,11 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Note, Settings } from "./types";
 import { resolveNoteWrite } from "./vaultNotes";
+import { recordVaultWrite } from "./vaultSync";
 
 const DEFAULT_FOLDER = "Hyperfocus";
 
 /** The vault folder that receives note files. */
-const notesDir = (s: Settings): string =>
+export const notesDir = (s: Settings): string =>
   `${s.vaultPath}/${s.vaultNotesFolder?.trim() || DEFAULT_FOLDER}`;
 
 /** Write a note into the vault notes folder as its own markdown file.
@@ -21,13 +22,27 @@ export async function saveNoteToVault(
   const write = resolveNoteWrite(note.title, note.vaultFile, note.vaultTitle);
   if (write.action === "overwrite") {
     await invoke("write_note", { path: write.path, content: note.body });
+    recordVaultWrite(write.path, note.body);
     return write.path;
   }
-  return invoke<string>("create_note", {
+  const path = await invoke<string>("create_note", {
     dir: notesDir(settings),
     filename: write.filename,
     content: note.body,
   });
+  recordVaultWrite(path, note.body);
+  return path;
+}
+
+/** Overwrite a linked note's existing file without the rename logic —
+ *  used by the auto-save path, where a pending title edit must not
+ *  create a new file until the rename applies on blur. */
+export async function overwriteNoteFile(
+  path: string,
+  content: string,
+): Promise<void> {
+  await invoke("write_note", { path, content });
+  recordVaultWrite(path, content);
 }
 
 /** Open a written note file in Obsidian. */

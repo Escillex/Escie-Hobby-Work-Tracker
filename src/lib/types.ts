@@ -149,6 +149,7 @@ export interface AppData {
   };
   todos: Todo[];
   notes: Note[];
+  vaultArchived?: string[]; // vault files released by app-side renames; never re-imported, never deleted
   focus: { now?: FocusRef; next?: FocusRef };
   stats: Stats;
   settings: Settings;
