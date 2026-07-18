@@ -97,7 +97,11 @@ fn list_notes(dir: String) -> Result<Vec<NoteFileInfo>, String> {
     }
     let entries = match std::fs::read_dir(&p) {
         Ok(e) => e,
-        Err(_) => return Ok(vec![]),
+        // Only a genuinely absent folder is an empty list (first run).
+        // Other failures (permissions, unmounted drive) must error so the
+        // frontend skips the reconcile instead of unlinking every note.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(vec![]),
+        Err(e) => return Err(format!("Cannot list {dir}: {e}")),
     };
     let mut out = Vec::new();
     for entry in entries.flatten() {
