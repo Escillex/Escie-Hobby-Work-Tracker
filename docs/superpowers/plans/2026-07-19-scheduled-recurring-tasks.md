@@ -549,7 +549,9 @@ git commit -m "Migrate per-todo early warning to a global setting"
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 ```
 
-- [ ] **Step 2: Add schedule state and inputs to the add form**
+- [ ] **Step 2: Add the reminder toggle and schedule inputs to the add form**
+
+Daily/weekly stay as modes in the existing dropdown; the schedule inputs sit behind an on/off reminder toggle (spec: "toggle reveals schedule").
 
 In `TasksView.tsx`:
 
@@ -562,7 +564,8 @@ import { isOverdue, WEEKDAYS } from "../lib/schedule";
 Add state next to the existing `time` state:
 
 ```ts
-const [schedTime, setSchedTime] = useState("");
+const [schedOn, setSchedOn] = useState(false);
+const [schedTime, setSchedTime] = useState("08:00");
 const [schedDay, setSchedDay] = useState(1); // Monday
 ```
 
@@ -570,8 +573,11 @@ Extend the todo literal in `add()` (after the `dueAt:` entry):
 
 ```ts
       scheduleTime:
-        (mode === "daily" || mode === "weekly") && schedTime ? schedTime : undefined,
-      scheduleDay: mode === "weekly" && schedTime ? schedDay : undefined,
+        (mode === "daily" || mode === "weekly") && schedOn && schedTime
+          ? schedTime
+          : undefined,
+      scheduleDay:
+        mode === "weekly" && schedOn && schedTime ? schedDay : undefined,
 ```
 
 In the `tasks-add-row` div, after the `mode === "scheduled"` fragment, add:
@@ -579,7 +585,14 @@ In the `tasks-add-row` div, after the `mode === "scheduled"` fragment, add:
 ```tsx
             {(mode === "daily" || mode === "weekly") && (
               <>
-                {mode === "weekly" && (
+                <button
+                  className={`btn ${schedOn ? "primary" : "ghost"} icon`}
+                  title={schedOn ? "Reminder on — click to disable" : "Remind at a set time"}
+                  onClick={() => setSchedOn(!schedOn)}
+                >
+                  {IC.clock}
+                </button>
+                {schedOn && mode === "weekly" && (
                   <select
                     className="input"
                     value={schedDay}
@@ -593,18 +606,20 @@ In the `tasks-add-row` div, after the `mode === "scheduled"` fragment, add:
                     ))}
                   </select>
                 )}
-                <input
-                  className="input"
-                  type="time"
-                  value={schedTime}
-                  title="Reminder time (optional — leave empty for no reminder)"
-                  onChange={(e) => setSchedTime(e.target.value)}
-                />
+                {schedOn && (
+                  <input
+                    className="input"
+                    type="time"
+                    value={schedTime}
+                    title="Reminder time"
+                    onChange={(e) => setSchedTime(e.target.value)}
+                  />
+                )}
               </>
             )}
 ```
 
-An empty time input means "no schedule" — the todo behaves exactly like today's recurring todos.
+Toggle off (or an empty time) means "no schedule" — the todo behaves exactly like today's recurring todos. `IC` is already imported in this file.
 
 - [ ] **Step 3: Derive overdue via the shared predicate and label schedules**
 

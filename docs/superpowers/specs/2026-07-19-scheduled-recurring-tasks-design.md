@@ -85,9 +85,11 @@ away):
 
 ## UI
 
-- **Task editor** (`TasksView`): when recurrence is daily, show an optional
-  time input; when weekly, a weekday picker plus the time input. Clearing the
-  time removes the schedule. The per-task early-minutes input is removed.
+- **Task editor** (`TasksView`): daily and weekly stay as modes in the
+  existing dropdown, but the schedule inputs sit behind an on/off reminder
+  toggle rather than always showing. Toggle on reveals the time input (plus a
+  weekday picker for weekly); toggle off means no schedule — the todo behaves
+  like today's recurring todos. The per-task early-minutes input is removed.
 - **Settings panel**: one numeric "Early warning (minutes)" field bound to
   `settings.earlyWarningMinutes`.
 - **Tasks view and widget**: scheduled recurring todos past their occurrence
