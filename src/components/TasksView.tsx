@@ -6,6 +6,7 @@ import { isOverdue, WEEKDAYS } from "../lib/schedule";
 import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
 import { Calendar, type DotKind } from "./Calendar";
+import { TagChips, TagFilterRow, TagPicker } from "./TagPicker";
 import "./TasksView.css";
 
 type TodoMode = "scheduled" | "someday" | "daily" | "weekly";
@@ -22,6 +23,9 @@ export function TasksView() {
   const [schedOn, setSchedOn] = useState(false);
   const [schedTime, setSchedTime] = useState("08:00");
   const [schedDay, setSchedDay] = useState(1); // Monday
+  const [addTags, setAddTags] = useState<string[]>([]);
+  const [addPickerOpen, setAddPickerOpen] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
   const someday = data.todos.filter((t) => t.recurrence === "none" && !t.dueAt);
@@ -29,6 +33,11 @@ export function TasksView() {
   const dayTodos = dated
     .filter((t) => dueDay(t.dueAt!) === selected)
     .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
+
+  const byTag = (t: Todo) => tagFilter === null || (t.tagIds?.includes(tagFilter) ?? false);
+  const dayTodosShown = dayTodos.filter(byTag);
+  const somedayShown = someday.filter(byTag);
+  const recurringShown = recurring.filter(byTag);
 
   // Highest-priority dot per day: overdue > pending > done.
   const dots = new Map<string, DotKind>();
@@ -60,6 +69,7 @@ export function TasksView() {
           : undefined,
       scheduleDay:
         mode === "weekly" && schedOn && schedTime ? schedDay : undefined,
+      tagIds: addTags.length > 0 ? addTags : undefined,
     };
     dispatch({ type: "todo/add", todo });
     setText("");
@@ -95,7 +105,7 @@ export function TasksView() {
         <div className="tasks-day-header">
           <h2>{prettyDay(selected, today)}</h2>
           <span className="tasks-day-count">
-            {dayTodos.length} task{dayTodos.length === 1 ? "" : "s"}
+            {dayTodosShown.length} task{dayTodosShown.length === 1 ? "" : "s"}
           </span>
         </div>
 
@@ -169,16 +179,36 @@ export function TasksView() {
                 )}
               </>
             )}
+            <div className="tag-picker-wrap">
+              <button
+                className={`btn ghost icon ${addTags.length > 0 ? "active" : ""}`}
+                title="Tags for this task"
+                onClick={() => setAddPickerOpen((v) => !v)}
+              >
+                {IC.tag}
+              </button>
+              {addPickerOpen && (
+                <TagPicker
+                  value={addTags}
+                  onToggle={(id, on) =>
+                    setAddTags((prev) => (on ? [...prev, id] : prev.filter((i) => i !== id)))
+                  }
+                  onClose={() => setAddPickerOpen(false)}
+                />
+              )}
+            </div>
             <button className="btn primary" disabled={!text.trim()} onClick={add}>
               {IC.plus} Add
             </button>
           </div>
         </div>
 
+        <TagFilterRow active={tagFilter} onChange={setTagFilter} />
+
         <div className="tasks-lists">
           <Section label={prettyDay(selected, today)}>
-            {dayTodos.length === 0 && <p className="tasks-empty">Nothing scheduled for this day.</p>}
-            {dayTodos.map((t) => (
+            {dayTodosShown.length === 0 && <p className="tasks-empty">Nothing scheduled for this day.</p>}
+            {dayTodosShown.map((t) => (
               <TaskRow
                 key={t.id}
                 todo={t}
@@ -192,9 +222,9 @@ export function TasksView() {
             ))}
           </Section>
 
-          {someday.length > 0 && (
-            <Section label={`Someday (${someday.length})`}>
-              {someday.map((t) => (
+          {somedayShown.length > 0 && (
+            <Section label={`Someday (${somedayShown.length})`}>
+              {somedayShown.map((t) => (
                 <TaskRow
                   key={t.id}
                   todo={t}
@@ -205,9 +235,9 @@ export function TasksView() {
             </Section>
           )}
 
-          {recurring.length > 0 && (
-            <Section label={`${IC.refresh} Repeating (${recurring.length})`}>
-              {recurring.map((t) => (
+          {recurringShown.length > 0 && (
+            <Section label={`${IC.refresh} Repeating (${recurringShown.length})`}>
+              {recurringShown.map((t) => (
                 <TaskRow
                   key={t.id}
                   todo={t}
@@ -244,6 +274,8 @@ function TaskRow({
   onDone: () => void;
   onDelete: () => void;
 }) {
+  const { dispatch } = useApp();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { focusNow, isFocused } = useFocusActions();
   const overdue = isOverdue(todo, new Date());
 
@@ -257,7 +289,34 @@ function TaskRow({
         {todo.done ? IC.check : null}
       </button>
       <span className="task-text">{todo.text}</span>
+      <TagChips tagIds={todo.tagIds} />
       {label && <span className="task-label">{label}</span>}
+      <div className="tag-picker-wrap">
+        <button
+          className="btn ghost icon"
+          title="Edit tags"
+          onClick={() => setPickerOpen((v) => !v)}
+        >
+          {IC.tag}
+        </button>
+        {pickerOpen && (
+          <TagPicker
+            value={todo.tagIds ?? []}
+            onToggle={(id, on) =>
+              dispatch({
+                type: "todo/update",
+                todo: {
+                  ...todo,
+                  tagIds: on
+                    ? [...(todo.tagIds ?? []), id]
+                    : (todo.tagIds ?? []).filter((i) => i !== id),
+                },
+              })
+            }
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </div>
       <button
         className={`btn ghost icon task-focus ${isFocused({ kind: "todo", id: todo.id }) ? "focused" : ""}`}
         title="Focus on this"
