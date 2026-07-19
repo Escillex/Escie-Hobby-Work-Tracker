@@ -1,6 +1,9 @@
 import type { AppData, Todo } from "./types";
 import { localDate } from "./types";
 
+/** Display names indexed by scheduleDay (Sunday = 0). */
+export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
 /** Parse strict "HH:MM" 24h. Undefined for anything malformed. */
 function parseTime(time: string): { h: number; m: number } | undefined {
   const match = /^(\d{2}):(\d{2})$/.exec(time);

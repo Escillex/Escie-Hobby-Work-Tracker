@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Todo } from "../lib/types";
 import { uid, localDate } from "../lib/types";
 import { useApp } from "../lib/state";
+import { isOverdue, WEEKDAYS } from "../lib/schedule";
 import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
 import { Calendar, type DotKind } from "./Calendar";
@@ -18,6 +19,9 @@ export function TasksView() {
   const [text, setText] = useState("");
   const [time, setTime] = useState("09:00");
   const [mode, setMode] = useState<TodoMode>("scheduled");
+  const [schedOn, setSchedOn] = useState(false);
+  const [schedTime, setSchedTime] = useState("08:00");
+  const [schedDay, setSchedDay] = useState(1); // Monday
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
   const someday = data.todos.filter((t) => t.recurrence === "none" && !t.dueAt);
@@ -50,6 +54,12 @@ export function TasksView() {
         mode === "scheduled"
           ? new Date(`${selected}T${time || "09:00"}`).toISOString()
           : undefined,
+      scheduleTime:
+        (mode === "daily" || mode === "weekly") && schedOn && schedTime
+          ? schedTime
+          : undefined,
+      scheduleDay:
+        mode === "weekly" && schedOn && schedTime ? schedDay : undefined,
     };
     dispatch({ type: "todo/add", todo });
     setText("");
@@ -125,6 +135,40 @@ export function TasksView() {
                 onChange={(e) => setTime(e.target.value)}
               />
             )}
+            {(mode === "daily" || mode === "weekly") && (
+              <>
+                <button
+                  className={`btn ${schedOn ? "primary" : "ghost"} icon`}
+                  title={schedOn ? "Reminder on — click to disable" : "Remind at a set time"}
+                  onClick={() => setSchedOn(!schedOn)}
+                >
+                  {IC.clock}
+                </button>
+                {schedOn && mode === "weekly" && (
+                  <select
+                    className="input"
+                    value={schedDay}
+                    title="Day of week"
+                    onChange={(e) => setSchedDay(Number(e.target.value))}
+                  >
+                    {WEEKDAYS.map((d, i) => (
+                      <option key={d} value={i}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {schedOn && (
+                  <input
+                    className="input"
+                    type="time"
+                    value={schedTime}
+                    title="Reminder time"
+                    onChange={(e) => setSchedTime(e.target.value)}
+                  />
+                )}
+              </>
+            )}
             <button className="btn primary" disabled={!text.trim()} onClick={add}>
               {IC.plus} Add
             </button>
@@ -167,7 +211,7 @@ export function TasksView() {
                 <TaskRow
                   key={t.id}
                   todo={t}
-                  label={t.recurrence}
+                  label={recurringLabel(t)}
                   onDone={() => complete(t)}
                   onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
                 />
@@ -201,11 +245,7 @@ function TaskRow({
   onDelete: () => void;
 }) {
   const { focusNow, isFocused } = useFocusActions();
-  const overdue =
-    todo.recurrence === "none" &&
-    todo.dueAt != null &&
-    !todo.done &&
-    new Date(todo.dueAt).getTime() < Date.now();
+  const overdue = isOverdue(todo, new Date());
 
   return (
     <div className={`task-row ${overdue ? "overdue" : ""} ${todo.done ? "done" : ""}`}>
@@ -230,6 +270,15 @@ function TaskRow({
       </button>
     </div>
   );
+}
+
+function recurringLabel(t: Todo): string {
+  if (!t.scheduleTime) return t.recurrence;
+  const day =
+    t.recurrence === "weekly" && t.scheduleDay != null
+      ? `${WEEKDAYS[t.scheduleDay]} `
+      : "";
+  return `${t.recurrence} · ${day}${t.scheduleTime}`;
 }
 
 function prettyDay(key: string, today: string): string {
