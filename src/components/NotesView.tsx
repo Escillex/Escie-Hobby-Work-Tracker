@@ -7,15 +7,20 @@ import { useFocusActions } from "../lib/focus";
 import { saveNoteToVault, openNoteInObsidian, overwriteNoteFile } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import { ObsidianPanel } from "./ObsidianPanel";
+import { TagChips, TagFilterRow, TagPicker } from "./TagPicker";
 import "./NotesView.css";
 
 export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { data, dispatch } = useApp();
   const { focusNow, isFocused } = useFocusActions();
-  const notes = data.notes;
-  const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(data.notes[0]?.id ?? null);
   const [preview, setPreview] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const notes = data.notes.filter(
+    (n) => tagFilter === null || (n.tagIds?.includes(tagFilter) ?? false),
+  );
   const autosaveTimers = useRef(new Map<string, number>());
 
   const selected = notes.find((n) => n.id === selectedId) ?? null;
@@ -87,6 +92,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
               {IC.plus}
             </button>
           </div>
+          <TagFilterRow active={tagFilter} onChange={setTagFilter} />
           <div className="notes-list-items">
             {notes.length === 0 && <p className="notes-empty">No notes yet.</p>}
             {notes.map((n) => (
@@ -105,6 +111,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   <span className="note-item-preview">
                     {n.body.replace(/[#*`>\-\n]/g, " ").trim().slice(0, 42) || "empty"}
                   </span>
+                  <TagChips tagIds={n.tagIds} />
                 </button>
                 <button
                   className={`btn ghost icon note-item-focus ${
@@ -165,6 +172,32 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 <button className="btn" onClick={toVault} title="Save to your Obsidian vault">
                   {IC.external} To vault
                 </button>
+                <div className="tag-picker-wrap">
+                  <button
+                    className="btn ghost icon"
+                    title="Edit tags"
+                    onClick={() => setTagPickerOpen((v) => !v)}
+                  >
+                    {IC.tag}
+                  </button>
+                  {tagPickerOpen && (
+                    <TagPicker
+                      value={selected.tagIds ?? []}
+                      onToggle={(id, on) =>
+                        dispatch({
+                          type: "note/patch",
+                          id: selected.id,
+                          patch: {
+                            tagIds: on
+                              ? [...(selected.tagIds ?? []), id]
+                              : (selected.tagIds ?? []).filter((i) => i !== id),
+                          },
+                        })
+                      }
+                      onClose={() => setTagPickerOpen(false)}
+                    />
+                  )}
+                </div>
                 <button
                   className="btn ghost icon danger"
                   title="Delete note"
