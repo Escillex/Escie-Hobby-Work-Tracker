@@ -9,7 +9,6 @@ import "./TasksView.css";
 
 type TodoMode = "scheduled" | "someday" | "daily" | "weekly";
 
-const EARLY_CHOICES = [5, 15, 30, 60];
 const dueDay = (iso: string) => localDate(new Date(iso));
 
 export function TasksView() {
@@ -18,7 +17,6 @@ export function TasksView() {
   const [selected, setSelected] = useState(today);
   const [text, setText] = useState("");
   const [time, setTime] = useState("09:00");
-  const [early, setEarly] = useState(30);
   const [mode, setMode] = useState<TodoMode>("scheduled");
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
@@ -46,7 +44,6 @@ export function TasksView() {
       id: uid(),
       text: t,
       createdAt: new Date().toISOString(),
-      earlyMinutes: early,
       recurrence: mode === "daily" || mode === "weekly" ? mode : "none",
       done: false,
       dueAt:
@@ -121,26 +118,12 @@ export function TasksView() {
               <option value="weekly">weekly</option>
             </select>
             {mode === "scheduled" && (
-              <>
-                <input
-                  className="input"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-                <select
-                  className="input"
-                  value={early}
-                  title="Heads-up before it's due"
-                  onChange={(e) => setEarly(Number(e.target.value))}
-                >
-                  {EARLY_CHOICES.map((m) => (
-                    <option key={m} value={m}>
-                      {m}m early
-                    </option>
-                  ))}
-                </select>
-              </>
+              <input
+                className="input"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
             )}
             <button className="btn primary" disabled={!text.trim()} onClick={add}>
               {IC.plus} Add

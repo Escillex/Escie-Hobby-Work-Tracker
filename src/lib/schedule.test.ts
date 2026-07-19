@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest";
 import type { Todo } from "./types";
+import { defaultData } from "./types";
 import {
   currentOccurrence,
   doneForOccurrence,
   dueTarget,
   isOverdue,
+  migrateScheduling,
 } from "./schedule";
 
 const base: Todo = {
   id: "t1",
   text: "meds",
   createdAt: "2026-07-01T00:00:00.000Z",
-  earlyMinutes: 30,
   recurrence: "none",
   done: false,
 };
+
+const clean = base;
 
 // Sat Jul 18 2026, 10:00 local
 const now = new Date(2026, 6, 18, 10, 0);
@@ -120,5 +123,61 @@ describe("doneForOccurrence / isOverdue", () => {
   it("unscheduled todos are never overdue", () => {
     expect(isOverdue(base, now)).toBe(false);
     expect(isOverdue({ ...base, recurrence: "daily" }, now)).toBe(false);
+  });
+});
+
+describe("migrateScheduling", () => {
+  it("seeds the global early-warning setting once", () => {
+    const out = migrateScheduling(defaultData());
+    expect(out.settings.earlyWarningMinutes).toBe(10);
+    const kept = migrateScheduling({
+      ...defaultData(),
+      settings: { githubUser: "", earlyWarningMinutes: 5 },
+    });
+    expect(kept.settings.earlyWarningMinutes).toBe(5);
+  });
+
+  it("drops per-todo earlyMinutes and converts notified booleans to keys", () => {
+    const dueAt = new Date(2026, 6, 18, 9, 0).toISOString();
+    // Models pre-migration data files; the legacy fields no longer exist on
+    // Todo, so these literals need assertions.
+    const data = {
+      ...defaultData(),
+      todos: [
+        {
+          ...clean,
+          earlyMinutes: 30,
+          dueAt,
+          notifiedEarly: true,
+          notifiedDue: true,
+        } as Todo,
+        {
+          ...clean,
+          id: "t2",
+          earlyMinutes: 15,
+          recurrence: "daily",
+          notifiedEarly: true,
+        } as Todo,
+      ],
+    };
+    const [a, b] = migrateScheduling(data).todos;
+    expect("earlyMinutes" in a).toBe(false);
+    expect("notifiedEarly" in a).toBe(false);
+    expect("notifiedDue" in a).toBe(false);
+    expect(a.notifiedEarlyFor).toBe(dueAt);
+    expect(a.notifiedDueFor).toBe(dueAt);
+    // Recurring todos just lose the legacy fields; keys are per-occurrence.
+    expect("earlyMinutes" in b).toBe(false);
+    expect("notifiedEarly" in b).toBe(false);
+    expect(b.notifiedEarlyFor).toBeUndefined();
+  });
+
+  it("leaves already-migrated todos untouched", () => {
+    const data = {
+      ...defaultData(),
+      settings: { githubUser: "", earlyWarningMinutes: 10 },
+      todos: [{ ...clean, notifiedDueFor: "2026-07-18T06:00:00.000Z" }],
+    };
+    expect(migrateScheduling(data)).toBe(data);
   });
 });

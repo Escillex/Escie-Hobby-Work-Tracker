@@ -1,4 +1,4 @@
-import type { Todo } from "./types";
+import type { AppData, Todo } from "./types";
 import { localDate } from "./types";
 
 /** Parse strict "HH:MM" 24h. Undefined for anything malformed. */
@@ -53,4 +53,36 @@ export function isOverdue(todo: Todo, now: Date): boolean {
   const target = dueTarget(todo, now);
   if (!target) return false;
   return now.getTime() >= target.getTime() && !doneForOccurrence(todo, target);
+}
+
+/** One-time data upgrade: per-todo earlyMinutes becomes the global
+ *  settings.earlyWarningMinutes, and the notified booleans become
+ *  occurrence-keyed fields (key = the dueAt instant for one-offs). */
+export function migrateScheduling(data: AppData): AppData {
+  let next = data;
+  if (next.settings.earlyWarningMinutes == null) {
+    next = { ...next, settings: { ...next.settings, earlyWarningMinutes: 10 } };
+  }
+  const isLegacy = (t: Todo) =>
+    "earlyMinutes" in t || "notifiedEarly" in t || "notifiedDue" in t;
+  if (next.todos.some(isLegacy)) {
+    next = {
+      ...next,
+      todos: next.todos.map((t) => {
+        if (!isLegacy(t)) return t;
+        const copy: Todo = { ...t };
+        const legacy = copy as unknown as Record<string, unknown>;
+        if (t.recurrence === "none" && t.dueAt) {
+          const key = new Date(t.dueAt).toISOString();
+          if (legacy.notifiedEarly === true) copy.notifiedEarlyFor = key;
+          if (legacy.notifiedDue === true) copy.notifiedDueFor = key;
+        }
+        delete legacy.earlyMinutes;
+        delete legacy.notifiedEarly;
+        delete legacy.notifiedDue;
+        return copy;
+      }),
+    };
+  }
+  return next;
 }

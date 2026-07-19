@@ -2,6 +2,7 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import type { AppData } from "./types";
 import { defaultData, localDate } from "./types";
 import type { ContributionData } from "./github";
+import { migrateScheduling } from "./schedule";
 
 let store: Store | null = null;
 
@@ -100,6 +101,8 @@ function migrate(data: AppData): AppData {
       ),
     };
   }
+  // Per-todo early-warning fields moved to one global setting.
+  next = migrateScheduling(next);
   return next;
 }
 
@@ -124,7 +127,7 @@ function resetRecurring(data: AppData): AppData {
   const todos = data.todos.map((t) => {
     if (t.recurrence === "none" || !t.done) return t;
     return recurrenceStale(t.recurrence, t.lastDone, today)
-      ? { ...t, done: false, notifiedEarly: false, notifiedDue: false }
+      ? { ...t, done: false }
       : t;
   });
   const entries = data.media.entries.map((e) => {

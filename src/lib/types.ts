@@ -112,13 +112,10 @@ export interface Todo {
   text: string;
   createdAt: string; // ISO
   dueAt?: string; // ISO, optional — undated todos are allowed
-  earlyMinutes: number; // heads-up notification this many minutes before dueAt
   recurrence: Recurrence;
   scheduleTime?: string; // "HH:MM" local — reminder time for a recurring todo
   scheduleDay?: number; // 0-6 (Sunday = 0) — weekday of a scheduled weekly todo
   lastDone?: string; // YYYY-MM-DD a recurring task was last completed
-  notifiedEarly?: boolean;
-  notifiedDue?: boolean;
   notifiedEarlyFor?: string; // occurrence ISO the early warning fired for
   notifiedDueFor?: string; // occurrence ISO the due notification fired for
   done: boolean;
