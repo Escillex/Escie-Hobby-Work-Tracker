@@ -23,7 +23,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   );
   const autosaveTimers = useRef(new Map<string, number>());
 
-  const selected = notes.find((n) => n.id === selectedId) ?? null;
+  const selected = data.notes.find((n) => n.id === selectedId) ?? null;
 
   const newNote = () => {
     const note: Note = {
@@ -94,7 +94,11 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           <TagFilterRow active={tagFilter} onChange={setTagFilter} />
           <div className="notes-list-items">
-            {notes.length === 0 && <p className="notes-empty">No notes yet.</p>}
+            {notes.length === 0 && (
+              <p className="notes-empty">
+                {data.notes.length === 0 ? "No notes yet." : "No notes match this tag."}
+              </p>
+            )}
             {notes.map((n) => (
               <div
                 key={n.id}
@@ -105,6 +109,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   onClick={() => {
                     setSelectedId(n.id);
                     setPreview(false);
+                    setTagPickerOpen(false);
                   }}
                 >
                   <span className="note-item-title">{n.title || "Untitled"}</span>
