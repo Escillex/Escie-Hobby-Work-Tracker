@@ -16,6 +16,12 @@ export interface Launcher {
   color: RosePineColor;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: RosePineColor;
+}
+
 export type FocusKind = "media" | "todo" | "task" | "note";
 
 /** A pointer to whatever you're currently focusing on. `parentId` is the
@@ -103,6 +109,7 @@ export interface Note {
   updatedAt: string; // ISO
   vaultFile?: string; // vault path this note was last written to
   vaultTitle?: string; // title the vault file was last written under
+  tagIds?: string[]; // Tag ids; absent = untagged
 }
 
 export type Recurrence = "none" | "daily" | "weekly";
@@ -119,6 +126,7 @@ export interface Todo {
   notifiedEarlyFor?: string; // occurrence ISO the early warning fired for
   notifiedDueFor?: string; // occurrence ISO the due notification fired for
   done: boolean;
+  tagIds?: string[]; // Tag ids; absent = untagged
 }
 
 export interface Stats {
@@ -151,6 +159,7 @@ export interface AppData {
   };
   todos: Todo[];
   notes: Note[];
+  tags: Tag[];
   vaultArchived?: string[]; // vault files released by app-side renames; never re-imported, never deleted
   focus: { now?: FocusRef; next?: FocusRef };
   stats: Stats;
@@ -184,6 +193,7 @@ export function defaultData(): AppData {
     },
     todos: [],
     notes: [],
+    tags: [],
     focus: {},
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { reducer } from "./reducer";
 import { defaultData } from "./types";
-import type { MediaCategory, MediaEntry } from "./types";
+import type { MediaCategory, MediaEntry, Note, Tag, Todo } from "./types";
 
 describe("category/update", () => {
   it("replaces a category by id, leaving others untouched", () => {
@@ -46,5 +46,52 @@ describe("media/update completedAt stamping", () => {
       entry: { ...gameEntry, status: "Beat" },
     });
     expect(moved.media.entries[0].completedAt).toBeUndefined();
+  });
+});
+
+const tag: Tag = { id: "tg1", name: "class schedule", color: "foam" };
+
+const todoFx = (over: Partial<Todo> = {}): Todo => ({
+  id: "td1",
+  text: "homework",
+  createdAt: "2026-07-01T00:00:00.000Z",
+  recurrence: "none",
+  done: false,
+  ...over,
+});
+
+const noteFx = (over: Partial<Note> = {}): Note => ({
+  id: "n1",
+  title: "lecture",
+  body: "",
+  createdAt: "2026-07-01T00:00:00.000Z",
+  updatedAt: "2026-07-01T00:00:00.000Z",
+  ...over,
+});
+
+describe("tag basics", () => {
+  it("adds and updates tags", () => {
+    const added = reducer(defaultData(), { type: "tag/add", tag });
+    expect(added.tags).toEqual([tag]);
+    const recolored = reducer(added, {
+      type: "tag/update",
+      tag: { ...tag, name: "school", color: "love" },
+    });
+    expect(recolored.tags[0]).toEqual({ id: "tg1", name: "school", color: "love" });
+  });
+
+  it("tag/delete removes the tag and strips it from items, keeping the items", () => {
+    const base = {
+      ...defaultData(),
+      tags: [tag],
+      todos: [todoFx({ tagIds: ["tg1", "other"] })],
+      notes: [noteFx({ tagIds: ["tg1"] })],
+    };
+    const next = reducer(base, { type: "tag/delete", id: "tg1" });
+    expect(next.tags).toEqual([]);
+    expect(next.todos[0].tagIds).toEqual(["other"]);
+    expect(next.notes[0].tagIds).toEqual([]);
+    expect(next.todos).toHaveLength(1);
+    expect(next.notes).toHaveLength(1);
   });
 });

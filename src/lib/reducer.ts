@@ -7,6 +7,7 @@ import type {
   Note,
   FocusRef,
   Settings,
+  Tag,
 } from "./types";
 import { localDate } from "./types";
 
@@ -30,6 +31,9 @@ export type Action =
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
+  | { type: "tag/add"; tag: Tag }
+  | { type: "tag/update"; tag: Tag }
+  | { type: "tag/delete"; id: string }
   | { type: "focus/set"; slot: "now" | "next"; ref?: FocusRef }
   | { type: "settings/update"; settings: Partial<Settings> };
 
@@ -152,6 +156,28 @@ export function reducer(state: AppData, action: Action): AppData {
       };
     case "todo/delete":
       return { ...state, todos: state.todos.filter((t) => t.id !== action.id) };
+    case "tag/add":
+      return { ...state, tags: [...state.tags, action.tag] };
+    case "tag/update":
+      return {
+        ...state,
+        tags: state.tags.map((t) => (t.id === action.tag.id ? action.tag : t)),
+      };
+    case "tag/delete":
+      return {
+        ...state,
+        tags: state.tags.filter((t) => t.id !== action.id),
+        todos: state.todos.map((t) =>
+          t.tagIds?.includes(action.id)
+            ? { ...t, tagIds: t.tagIds.filter((i) => i !== action.id) }
+            : t,
+        ),
+        notes: state.notes.map((n) =>
+          n.tagIds?.includes(action.id)
+            ? { ...n, tagIds: n.tagIds.filter((i) => i !== action.id) }
+            : n,
+        ),
+      };
     case "focus/set":
       return { ...state, focus: { ...state.focus, [action.slot]: action.ref } };
     case "settings/update":

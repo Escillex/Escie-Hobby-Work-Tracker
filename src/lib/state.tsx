@@ -27,6 +27,7 @@ const EMPTY: AppData = {
   media: { categories: [], entries: [] },
   todos: [],
   notes: [],
+  tags: [],
   focus: {},
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },

@@ -45,6 +45,9 @@ function migrate(data: AppData): AppData {
   if (!next.notes) {
     next = { ...next, notes: [] };
   }
+  if (!next.tags) {
+    next = { ...next, tags: [] };
+  }
   if (!next.focus) {
     next = { ...next, focus: {} };
   }
