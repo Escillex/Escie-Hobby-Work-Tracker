@@ -29,6 +29,7 @@ export function TasksView() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
+  const [bulkApplied, setBulkApplied] = useState<string[]>([]);
 
   const toggleSelected = (id: string) =>
     setSelectedIds((prev) => {
@@ -121,11 +122,13 @@ export function TasksView() {
             {dayTodosShown.length} task{dayTodosShown.length === 1 ? "" : "s"}
           </span>
           <button
-            className={`btn ghost ${selectMode ? "active" : ""}`}
+            className={`btn ${selectMode ? "primary" : "ghost"}`}
             title="Select multiple"
             onClick={() => {
               setSelectMode((v) => !v);
               setSelectedIds(new Set());
+              setBulkPickerOpen(false);
+              setBulkApplied([]);
             }}
           >
             {IC.check} Select
@@ -237,6 +240,8 @@ export function TasksView() {
                 if (!confirm(`Delete ${selectedIds.size} selected tasks?`)) return;
                 dispatch({ type: "todo/delete-many", ids: [...selectedIds] });
                 setSelectedIds(new Set());
+                setBulkPickerOpen(false);
+                setBulkApplied([]);
               }}
             >
               Delete
@@ -247,11 +252,18 @@ export function TasksView() {
               </button>
               {bulkPickerOpen && (
                 <TagPicker
-                  value={[]}
+                  value={bulkApplied}
                   onToggle={(id, on) => {
-                    if (on) dispatch({ type: "todo/tag-many", ids: [...selectedIds], tagId: id });
+                    if (on) {
+                      dispatch({ type: "todo/tag-many", ids: [...selectedIds], tagId: id });
+                      setBulkApplied((prev) => [...prev, id]);
+                    }
                   }}
-                  onClose={() => setBulkPickerOpen(false)}
+                  onClose={() => {
+                    setBulkPickerOpen(false);
+                    setSelectedIds(new Set());
+                    setBulkApplied([]);
+                  }}
                 />
               )}
             </div>

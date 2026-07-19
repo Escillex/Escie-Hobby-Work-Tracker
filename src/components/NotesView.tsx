@@ -21,6 +21,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedNotesIds, setSelectedNotesIds] = useState<Set<string>>(new Set());
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
+  const [bulkApplied, setBulkApplied] = useState<string[]>([]);
 
   const toggleSelectedNote = (id: string) =>
     setSelectedNotesIds((prev) => {
@@ -103,11 +104,13 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
               {IC.plus}
             </button>
             <button
-              className={`btn ghost icon ${selectMode ? "active" : ""}`}
+              className={`btn icon ${selectMode ? "primary" : "ghost"}`}
               title="Select multiple"
               onClick={() => {
                 setSelectMode((v) => !v);
                 setSelectedNotesIds(new Set());
+                setBulkPickerOpen(false);
+                setBulkApplied([]);
               }}
             >
               {IC.check}
@@ -124,6 +127,8 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   dispatch({ type: "note/delete-many", ids: [...selectedNotesIds] });
                   setSelectedNotesIds(new Set());
                   setSelectedId(null);
+                  setBulkPickerOpen(false);
+                  setBulkApplied([]);
                 }}
               >
                 Delete
@@ -134,11 +139,18 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 </button>
                 {bulkPickerOpen && (
                   <TagPicker
-                    value={[]}
+                    value={bulkApplied}
                     onToggle={(id, on) => {
-                      if (on) dispatch({ type: "note/tag-many", ids: [...selectedNotesIds], tagId: id });
+                      if (on) {
+                        dispatch({ type: "note/tag-many", ids: [...selectedNotesIds], tagId: id });
+                        setBulkApplied((prev) => [...prev, id]);
+                      }
                     }}
-                    onClose={() => setBulkPickerOpen(false)}
+                    onClose={() => {
+                      setBulkPickerOpen(false);
+                      setSelectedNotesIds(new Set());
+                      setBulkApplied([]);
+                    }}
                   />
                 )}
               </div>
