@@ -27,15 +27,19 @@ export type Action =
   | { type: "note/update"; note: Note }
   | { type: "note/patch"; id: string; patch: Partial<Note> }
   | { type: "note/delete"; id: string }
+  | { type: "note/delete-many"; ids: string[] }
   | { type: "vault/set-archived"; paths: string[] }
   | { type: "todo/add"; todo: Todo }
   | { type: "todo/update"; todo: Todo }
   | { type: "todo/delete"; id: string }
+  | { type: "todo/delete-many"; ids: string[] }
   | { type: "tag/add"; tag: Tag }
   | { type: "tag/update"; tag: Tag }
   | { type: "tag/delete"; id: string }
   | { type: "tag/complete"; id: string; today: string }
   | { type: "tag/purge"; id: string }
+  | { type: "todo/tag-many"; ids: string[]; tagId: string }
+  | { type: "note/tag-many"; ids: string[]; tagId: string }
   | { type: "focus/set"; slot: "now" | "next"; ref?: FocusRef }
   | { type: "settings/update"; settings: Partial<Settings> };
 
@@ -164,6 +168,15 @@ export function reducer(state: AppData, action: Action): AppData {
           : state.vaultArchived,
       };
     }
+    case "note/delete-many": {
+      const ids = new Set(action.ids);
+      const dead = state.notes.filter((n) => ids.has(n.id));
+      return {
+        ...state,
+        notes: state.notes.filter((n) => !ids.has(n.id)),
+        vaultArchived: archivePaths(state.vaultArchived, dead),
+      };
+    }
     case "vault/set-archived":
       return { ...state, vaultArchived: action.paths };
     case "todo/add":
@@ -177,6 +190,10 @@ export function reducer(state: AppData, action: Action): AppData {
       };
     case "todo/delete":
       return { ...state, todos: state.todos.filter((t) => t.id !== action.id) };
+    case "todo/delete-many": {
+      const ids = new Set(action.ids);
+      return { ...state, todos: state.todos.filter((t) => !ids.has(t.id)) };
+    }
     case "tag/add":
       return { ...state, tags: [...state.tags, action.tag] };
     case "tag/update":
@@ -218,6 +235,28 @@ export function reducer(state: AppData, action: Action): AppData {
         todos: state.todos.filter((t) => !tagged(t.tagIds)),
         notes: state.notes.filter((n) => !tagged(n.tagIds)),
         vaultArchived: archivePaths(state.vaultArchived, deadNotes),
+      };
+    }
+    case "todo/tag-many": {
+      const ids = new Set(action.ids);
+      return {
+        ...state,
+        todos: state.todos.map((t) =>
+          ids.has(t.id) && !t.tagIds?.includes(action.tagId)
+            ? { ...t, tagIds: [...(t.tagIds ?? []), action.tagId] }
+            : t,
+        ),
+      };
+    }
+    case "note/tag-many": {
+      const ids = new Set(action.ids);
+      return {
+        ...state,
+        notes: state.notes.map((n) =>
+          ids.has(n.id) && !n.tagIds?.includes(action.tagId)
+            ? { ...n, tagIds: [...(n.tagIds ?? []), action.tagId] }
+            : n,
+        ),
       };
     }
     case "focus/set":

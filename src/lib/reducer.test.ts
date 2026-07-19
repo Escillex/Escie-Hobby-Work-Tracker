@@ -150,3 +150,33 @@ describe("note/delete vault archiving", () => {
     expect(next2.notes).toEqual([]);
   });
 });
+
+describe("bulk actions", () => {
+  it("delete-many removes listed items and archives linked note paths", () => {
+    const base = {
+      ...defaultData(),
+      todos: [todoFx(), todoFx({ id: "td2" }), todoFx({ id: "td3" })],
+      notes: [noteFx({ vaultFile: "vault/x.md" }), noteFx({ id: "n2" })],
+    };
+    const next = reducer(base, { type: "todo/delete-many", ids: ["td1", "td3", "ghost"] });
+    expect(next.todos.map((t) => t.id)).toEqual(["td2"]);
+    const next2 = reducer(next, { type: "note/delete-many", ids: ["n1"] });
+    expect(next2.notes.map((n) => n.id)).toEqual(["n2"]);
+    expect(next2.vaultArchived).toEqual(["vault/x.md"]);
+  });
+
+  it("tag-many adds the tag once without duplicating existing tags", () => {
+    const base = {
+      ...defaultData(),
+      tags: [tag],
+      todos: [todoFx({ tagIds: ["tg1"] }), todoFx({ id: "td2", tagIds: ["other"] }), todoFx({ id: "td3" })],
+      notes: [noteFx()],
+    };
+    const next = reducer(base, { type: "todo/tag-many", ids: ["td1", "td2"], tagId: "tg1" });
+    expect(next.todos[0].tagIds).toEqual(["tg1"]);
+    expect(next.todos[1].tagIds).toEqual(["other", "tg1"]);
+    expect(next.todos[2].tagIds).toBeUndefined();
+    const next2 = reducer(next, { type: "note/tag-many", ids: ["n1"], tagId: "tg1" });
+    expect(next2.notes[0].tagIds).toEqual(["tg1"]);
+  });
+});
