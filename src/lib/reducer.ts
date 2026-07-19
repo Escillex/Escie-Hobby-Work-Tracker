@@ -34,8 +34,21 @@ export type Action =
   | { type: "tag/add"; tag: Tag }
   | { type: "tag/update"; tag: Tag }
   | { type: "tag/delete"; id: string }
+  | { type: "tag/complete"; id: string; today: string }
+  | { type: "tag/purge"; id: string }
   | { type: "focus/set"; slot: "now" | "next"; ref?: FocusRef }
   | { type: "settings/update"; settings: Partial<Settings> };
+
+/** Append the vault paths of dead linked notes so reconcile never
+ *  re-imports them; the files themselves are never deleted. */
+function archivePaths(
+  archived: string[] | undefined,
+  notes: Note[],
+): string[] | undefined {
+  const paths = notes.map((n) => n.vaultFile).filter((p): p is string => !!p);
+  if (paths.length === 0) return archived;
+  return [...new Set([...(archived ?? []), ...paths])];
+}
 
 export function reducer(state: AppData, action: Action): AppData {
   switch (action.type) {
@@ -141,8 +154,16 @@ export function reducer(state: AppData, action: Action): AppData {
           n.id === action.id ? { ...n, ...action.patch } : n,
         ),
       };
-    case "note/delete":
-      return { ...state, notes: state.notes.filter((n) => n.id !== action.id) };
+    case "note/delete": {
+      const dead = state.notes.find((n) => n.id === action.id);
+      return {
+        ...state,
+        notes: state.notes.filter((n) => n.id !== action.id),
+        vaultArchived: dead
+          ? archivePaths(state.vaultArchived, [dead])
+          : state.vaultArchived,
+      };
+    }
     case "vault/set-archived":
       return { ...state, vaultArchived: action.paths };
     case "todo/add":
@@ -178,6 +199,27 @@ export function reducer(state: AppData, action: Action): AppData {
             : n,
         ),
       };
+    case "tag/complete":
+      return {
+        ...state,
+        todos: state.todos.map((t) => {
+          if (!t.tagIds?.includes(action.id) || t.done) return t;
+          return t.recurrence === "none"
+            ? { ...t, done: true }
+            : { ...t, done: true, lastDone: action.today };
+        }),
+      };
+    case "tag/purge": {
+      const tagged = (ids?: string[]) => ids?.includes(action.id) ?? false;
+      const deadNotes = state.notes.filter((n) => tagged(n.tagIds));
+      return {
+        ...state,
+        tags: state.tags.filter((t) => t.id !== action.id),
+        todos: state.todos.filter((t) => !tagged(t.tagIds)),
+        notes: state.notes.filter((n) => !tagged(n.tagIds)),
+        vaultArchived: archivePaths(state.vaultArchived, deadNotes),
+      };
+    }
     case "focus/set":
       return { ...state, focus: { ...state.focus, [action.slot]: action.ref } };
     case "settings/update":
