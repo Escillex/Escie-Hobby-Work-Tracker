@@ -73,6 +73,8 @@ export function TasksView() {
     };
     dispatch({ type: "todo/add", todo });
     setText("");
+    setAddTags([]);
+    setAddPickerOpen(false);
   };
 
   const complete = (t: Todo) =>
@@ -181,7 +183,7 @@ export function TasksView() {
             )}
             <div className="tag-picker-wrap">
               <button
-                className={`btn ghost icon ${addTags.length > 0 ? "active" : ""}`}
+                className={`btn ${addTags.length > 0 || addPickerOpen ? "primary" : "ghost"} icon`}
                 title="Tags for this task"
                 onClick={() => setAddPickerOpen((v) => !v)}
               >
