@@ -18,6 +18,17 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedNotesIds, setSelectedNotesIds] = useState<Set<string>>(new Set());
+  const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
+
+  const toggleSelectedNote = (id: string) =>
+    setSelectedNotesIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const notes = data.notes.filter(
     (n) => tagFilter === null || (n.tagIds?.includes(tagFilter) ?? false),
   );
@@ -91,8 +102,48 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
             <button className="btn ghost icon" title="New note" onClick={newNote}>
               {IC.plus}
             </button>
+            <button
+              className={`btn ghost icon ${selectMode ? "active" : ""}`}
+              title="Select multiple"
+              onClick={() => {
+                setSelectMode((v) => !v);
+                setSelectedNotesIds(new Set());
+              }}
+            >
+              {IC.check}
+            </button>
           </div>
           <TagFilterRow active={tagFilter} onChange={setTagFilter} />
+          {selectMode && selectedNotesIds.size > 0 && (
+            <div className="bulk-bar">
+              <span>{selectedNotesIds.size} selected</span>
+              <button
+                className="btn ghost danger"
+                onClick={() => {
+                  if (!confirm(`Delete ${selectedNotesIds.size} selected notes? Vault files stay in Obsidian.`)) return;
+                  dispatch({ type: "note/delete-many", ids: [...selectedNotesIds] });
+                  setSelectedNotesIds(new Set());
+                  setSelectedId(null);
+                }}
+              >
+                Delete
+              </button>
+              <div className="tag-picker-wrap">
+                <button className="btn ghost" onClick={() => setBulkPickerOpen((v) => !v)}>
+                  {IC.tag} Tag
+                </button>
+                {bulkPickerOpen && (
+                  <TagPicker
+                    value={[]}
+                    onToggle={(id, on) => {
+                      if (on) dispatch({ type: "note/tag-many", ids: [...selectedNotesIds], tagId: id });
+                    }}
+                    onClose={() => setBulkPickerOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+          )}
           <div className="notes-list-items">
             {notes.length === 0 && (
               <p className="notes-empty">
@@ -104,6 +155,15 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 key={n.id}
                 className={`notes-list-item ${n.id === selectedId ? "active" : ""}`}
               >
+                {selectMode && (
+                  <button
+                    className={`check-box ${selectedNotesIds.has(n.id) ? "checked" : ""}`}
+                    title="Select"
+                    onClick={() => toggleSelectedNote(n.id)}
+                  >
+                    {selectedNotesIds.has(n.id) ? IC.check : null}
+                  </button>
+                )}
                 <button
                   className="note-item-open"
                   onClick={() => {

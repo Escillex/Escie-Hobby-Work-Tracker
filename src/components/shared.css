@@ -120,3 +120,16 @@
 }
 .tag-picker-new { display: flex; gap: 0.3rem; }
 .tag-picker-empty { margin: 0; font-size: 0.78rem; color: var(--rp-muted); }
+
+/* Bulk actions */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--glass-overlay);
+  border: 1px solid var(--glass-border);
+  font-size: 0.8rem;
+  margin: 0.4rem 0;
+}

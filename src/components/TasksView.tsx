@@ -26,6 +26,17 @@ export function TasksView() {
   const [addTags, setAddTags] = useState<string[]>([]);
   const [addPickerOpen, setAddPickerOpen] = useState(false);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
   const someday = data.todos.filter((t) => t.recurrence === "none" && !t.dueAt);
@@ -109,6 +120,16 @@ export function TasksView() {
           <span className="tasks-day-count">
             {dayTodosShown.length} task{dayTodosShown.length === 1 ? "" : "s"}
           </span>
+          <button
+            className={`btn ghost ${selectMode ? "active" : ""}`}
+            title="Select multiple"
+            onClick={() => {
+              setSelectMode((v) => !v);
+              setSelectedIds(new Set());
+            }}
+          >
+            {IC.check} Select
+          </button>
         </div>
 
         <div className="tasks-add">
@@ -207,6 +228,36 @@ export function TasksView() {
 
         <TagFilterRow active={tagFilter} onChange={setTagFilter} />
 
+        {selectMode && selectedIds.size > 0 && (
+          <div className="bulk-bar">
+            <span>{selectedIds.size} selected</span>
+            <button
+              className="btn ghost danger"
+              onClick={() => {
+                if (!confirm(`Delete ${selectedIds.size} selected tasks?`)) return;
+                dispatch({ type: "todo/delete-many", ids: [...selectedIds] });
+                setSelectedIds(new Set());
+              }}
+            >
+              Delete
+            </button>
+            <div className="tag-picker-wrap">
+              <button className="btn ghost" onClick={() => setBulkPickerOpen((v) => !v)}>
+                {IC.tag} Tag
+              </button>
+              {bulkPickerOpen && (
+                <TagPicker
+                  value={[]}
+                  onToggle={(id, on) => {
+                    if (on) dispatch({ type: "todo/tag-many", ids: [...selectedIds], tagId: id });
+                  }}
+                  onClose={() => setBulkPickerOpen(false)}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="tasks-lists">
           <Section label={prettyDay(selected, today)}>
             {dayTodosShown.length === 0 && <p className="tasks-empty">Nothing scheduled for this day.</p>}
@@ -220,6 +271,9 @@ export function TasksView() {
                 })}
                 onDone={() => complete(t)}
                 onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+                selectMode={selectMode}
+                selected={selectedIds.has(t.id)}
+                onToggleSelect={() => toggleSelected(t.id)}
               />
             ))}
           </Section>
@@ -232,6 +286,9 @@ export function TasksView() {
                   todo={t}
                   onDone={() => complete(t)}
                   onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(t.id)}
+                  onToggleSelect={() => toggleSelected(t.id)}
                 />
               ))}
             </Section>
@@ -246,6 +303,9 @@ export function TasksView() {
                   label={recurringLabel(t)}
                   onDone={() => complete(t)}
                   onDelete={() => dispatch({ type: "todo/delete", id: t.id })}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(t.id)}
+                  onToggleSelect={() => toggleSelected(t.id)}
                 />
               ))}
             </Section>
@@ -270,11 +330,17 @@ function TaskRow({
   label,
   onDone,
   onDelete,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   todo: Todo;
   label?: string;
   onDone: () => void;
   onDelete: () => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const { dispatch } = useApp();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -283,13 +349,23 @@ function TaskRow({
 
   return (
     <div className={`task-row ${overdue ? "overdue" : ""} ${todo.done ? "done" : ""}`}>
-      <button
-        className={`check-box ${todo.done ? "checked" : ""}`}
-        title={todo.done ? "Mark undone" : "Mark done"}
-        onClick={onDone}
-      >
-        {todo.done ? IC.check : null}
-      </button>
+      {selectMode ? (
+        <button
+          className={`check-box ${selected ? "checked" : ""}`}
+          title="Select"
+          onClick={onToggleSelect}
+        >
+          {selected ? IC.check : null}
+        </button>
+      ) : (
+        <button
+          className={`check-box ${todo.done ? "checked" : ""}`}
+          title={todo.done ? "Mark undone" : "Mark done"}
+          onClick={onDone}
+        >
+          {todo.done ? IC.check : null}
+        </button>
+      )}
       <span className="task-text">{todo.text}</span>
       <TagChips tagIds={todo.tagIds} />
       {label && <span className="task-label">{label}</span>}
