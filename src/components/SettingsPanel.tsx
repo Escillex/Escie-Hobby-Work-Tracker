@@ -240,6 +240,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           ))}
         </datalist>
       </div>
+
+      <div className="panel-title" style={{ marginTop: "0.5rem" }}>Notifications</div>
+      <div className="field">
+        <label>Early warning (minutes before a task is due)</label>
+        <input
+          className="input"
+          type="number"
+          min={0}
+          value={s.earlyWarningMinutes ?? 10}
+          onChange={(e) =>
+            set({ earlyWarningMinutes: Math.max(0, Number(e.target.value) || 0) })
+          }
+        />
+      </div>
     </Modal>
   );
 }
