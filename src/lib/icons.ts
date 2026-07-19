@@ -15,6 +15,7 @@ export const IC = {
   bolt: "",
   random: "",
   clock: "",
+  tag: "",
   bulb: "",
   github: "",
   gamepad: "",
