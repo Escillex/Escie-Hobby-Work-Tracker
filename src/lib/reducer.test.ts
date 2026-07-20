@@ -84,14 +84,15 @@ describe("tag basics", () => {
     const base = {
       ...defaultData(),
       tags: [tag],
-      todos: [todoFx({ tagIds: ["tg1", "other"] })],
-      notes: [noteFx({ tagIds: ["tg1"] })],
+      todos: [todoFx({ tagId: "tg1" }), todoFx({ id: "td2", tagId: "other" })],
+      notes: [noteFx({ tagId: "tg1" })],
     };
     const next = reducer(base, { type: "tag/delete", id: "tg1" });
     expect(next.tags).toEqual([]);
-    expect(next.todos[0].tagIds).toEqual(["other"]);
-    expect(next.notes[0].tagIds).toEqual([]);
-    expect(next.todos).toHaveLength(1);
+    expect(next.todos[0].tagId).toBeUndefined();
+    expect(next.todos[1].tagId).toBe("other");
+    expect(next.notes[0].tagId).toBeUndefined();
+    expect(next.todos).toHaveLength(2);
     expect(next.notes).toHaveLength(1);
   });
 });
@@ -102,8 +103,8 @@ describe("tag/complete", () => {
       ...defaultData(),
       tags: [tag],
       todos: [
-        todoFx({ tagIds: ["tg1"] }),
-        todoFx({ id: "td2", recurrence: "daily", tagIds: ["tg1"] }),
+        todoFx({ tagId: "tg1" }),
+        todoFx({ id: "td2", recurrence: "daily", tagId: "tg1" }),
         todoFx({ id: "td3" }),
       ],
     };
@@ -121,10 +122,10 @@ describe("tag/purge", () => {
       ...defaultData(),
       tags: [tag],
       vaultArchived: ["old.md"],
-      todos: [todoFx({ tagIds: ["tg1", "other"] }), todoFx({ id: "td3" })],
+      todos: [todoFx({ tagId: "tg1" }), todoFx({ id: "td3" })],
       notes: [
-        noteFx({ tagIds: ["tg1"], vaultFile: "vault/lecture.md" }),
-        noteFx({ id: "n2", tagIds: ["tg1"] }),
+        noteFx({ tagId: "tg1", vaultFile: "vault/lecture.md" }),
+        noteFx({ id: "n2", tagId: "tg1" }),
         noteFx({ id: "n3" }),
       ],
     };
@@ -165,18 +166,18 @@ describe("bulk actions", () => {
     expect(next2.vaultArchived).toEqual(["vault/x.md"]);
   });
 
-  it("tag-many adds the tag once without duplicating existing tags", () => {
+  it("tag-many replaces the item's tag, leaving unlisted items alone", () => {
     const base = {
       ...defaultData(),
       tags: [tag],
-      todos: [todoFx({ tagIds: ["tg1"] }), todoFx({ id: "td2", tagIds: ["other"] }), todoFx({ id: "td3" })],
+      todos: [todoFx({ tagId: "tg1" }), todoFx({ id: "td2", tagId: "other" }), todoFx({ id: "td3" })],
       notes: [noteFx()],
     };
     const next = reducer(base, { type: "todo/tag-many", ids: ["td1", "td2"], tagId: "tg1" });
-    expect(next.todos[0].tagIds).toEqual(["tg1"]);
-    expect(next.todos[1].tagIds).toEqual(["other", "tg1"]);
-    expect(next.todos[2].tagIds).toBeUndefined();
+    expect(next.todos[0].tagId).toBe("tg1");
+    expect(next.todos[1].tagId).toBe("tg1");
+    expect(next.todos[2].tagId).toBeUndefined();
     const next2 = reducer(next, { type: "note/tag-many", ids: ["n1"], tagId: "tg1" });
-    expect(next2.notes[0].tagIds).toEqual(["tg1"]);
+    expect(next2.notes[0].tagId).toBe("tg1");
   });
 });

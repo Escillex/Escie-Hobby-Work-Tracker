@@ -206,34 +206,29 @@ export function reducer(state: AppData, action: Action): AppData {
         ...state,
         tags: state.tags.filter((t) => t.id !== action.id),
         todos: state.todos.map((t) =>
-          t.tagIds?.includes(action.id)
-            ? { ...t, tagIds: t.tagIds.filter((i) => i !== action.id) }
-            : t,
+          t.tagId === action.id ? { ...t, tagId: undefined } : t,
         ),
         notes: state.notes.map((n) =>
-          n.tagIds?.includes(action.id)
-            ? { ...n, tagIds: n.tagIds.filter((i) => i !== action.id) }
-            : n,
+          n.tagId === action.id ? { ...n, tagId: undefined } : n,
         ),
       };
     case "tag/complete":
       return {
         ...state,
         todos: state.todos.map((t) => {
-          if (!t.tagIds?.includes(action.id) || t.done) return t;
+          if (t.tagId !== action.id || t.done) return t;
           return t.recurrence === "none"
             ? { ...t, done: true }
             : { ...t, done: true, lastDone: action.today };
         }),
       };
     case "tag/purge": {
-      const tagged = (ids?: string[]) => ids?.includes(action.id) ?? false;
-      const deadNotes = state.notes.filter((n) => tagged(n.tagIds));
+      const deadNotes = state.notes.filter((n) => n.tagId === action.id);
       return {
         ...state,
         tags: state.tags.filter((t) => t.id !== action.id),
-        todos: state.todos.filter((t) => !tagged(t.tagIds)),
-        notes: state.notes.filter((n) => !tagged(n.tagIds)),
+        todos: state.todos.filter((t) => t.tagId !== action.id),
+        notes: state.notes.filter((n) => n.tagId !== action.id),
         vaultArchived: archivePaths(state.vaultArchived, deadNotes),
       };
     }
@@ -242,9 +237,7 @@ export function reducer(state: AppData, action: Action): AppData {
       return {
         ...state,
         todos: state.todos.map((t) =>
-          ids.has(t.id) && !t.tagIds?.includes(action.tagId)
-            ? { ...t, tagIds: [...(t.tagIds ?? []), action.tagId] }
-            : t,
+          ids.has(t.id) ? { ...t, tagId: action.tagId } : t,
         ),
       };
     }
@@ -253,9 +246,7 @@ export function reducer(state: AppData, action: Action): AppData {
       return {
         ...state,
         notes: state.notes.map((n) =>
-          ids.has(n.id) && !n.tagIds?.includes(action.tagId)
-            ? { ...n, tagIds: [...(n.tagIds ?? []), action.tagId] }
-            : n,
+          ids.has(n.id) ? { ...n, tagId: action.tagId } : n,
         ),
       };
     }
