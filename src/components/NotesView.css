@@ -45,6 +45,10 @@
   transition: border-color 0.15s var(--ease);
 }
 
+.notes-list-item.tagged {
+  border-left: 3px solid var(--tag-color);
+}
+
 .note-item-open {
   flex: 1;
   min-width: 0;

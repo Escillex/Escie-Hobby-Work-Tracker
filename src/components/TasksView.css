@@ -131,6 +131,11 @@
   border-color: var(--glass-border);
 }
 
+.task-row.tagged {
+  border-left: 3px solid var(--tag-color);
+}
+
+/* Overdue wins the left edge over the tag color (same specificity, later rule). */
 .task-row.overdue {
   border-left: 3px solid var(--rp-love);
 }

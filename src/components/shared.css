@@ -97,8 +97,6 @@
 .tag-chip.foam { border-color: var(--rp-foam); color: var(--rp-foam); }
 .tag-chip.iris { border-color: var(--rp-iris); color: var(--rp-iris); }
 .tag-chip.on { background: var(--rp-overlay); color: var(--rp-text); }
-.tag-chip.mini { font-size: 0.65rem; padding: 0 0.4rem; cursor: default; }
-.tag-chips { display: inline-flex; gap: 0.25rem; margin-left: 0.4rem; }
 .tag-filter-row {
   display: flex;
   flex-wrap: wrap;

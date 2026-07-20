@@ -1,33 +1,21 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Tag } from "../lib/types";
+import type { RosePineColor, Tag } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { IC } from "../lib/icons";
+import { ColorPicker } from "./ColorPicker";
 import "./shared.css";
 
-/** Popover for toggling tag membership; parent needs .tag-picker-wrap.
- *  Portaled to <body> with fixed positioning — inside a scroll container
- *  (task/note lists have overflow-y: auto) an absolute popover gets
- *  clipped at the panel edge. */
-export function TagPicker({
-  value,
-  onToggle,
-  onClose,
-}: {
-  value: string[];
-  onToggle: (tagId: string, on: boolean) => void;
-  onClose: () => void;
-}) {
-  const { data, dispatch } = useApp();
-  const [newName, setNewName] = useState("");
+/** Fixed-position anchoring for popovers portaled to <body> — inside a
+ *  scroll container (task/note lists have overflow-y: auto) or under a
+ *  backdrop-filter ancestor, in-place positioning gets clipped. Render the
+ *  returned anchorRef on a hidden span inside the .tag-picker-wrap; the
+ *  popover gets popRef + style. Flips above when short on space below. */
+export function usePopoverPos(heightDep: unknown = null) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-
-  // Anchor below the .tag-picker-wrap button; flip above if the popover
-  // would run past the bottom of the window. Re-runs as tags are created
-  // since that changes the popover's height.
   useLayoutEffect(() => {
     const wrap = anchorRef.current?.parentElement;
     const pop = popRef.current;
@@ -38,36 +26,55 @@ export function TagPicker({
       top = Math.max(8, r.top - pop.offsetHeight - 4);
     }
     setPos({ top, right: Math.max(8, window.innerWidth - r.right) });
-  }, [data.tags.length]);
+  }, [heightDep]);
+  const style = pos
+    ? { top: pos.top, right: pos.right }
+    : ({ visibility: "hidden" } as const);
+  return { anchorRef, popRef, style };
+}
+
+/** Radio-style popover assigning at most one tag; parent needs
+ *  .tag-picker-wrap. Clicking the active chip clears the tag; creating a
+ *  tag assigns it immediately with the chosen color. */
+export function TagPicker({
+  active,
+  onPick,
+  onClose,
+}: {
+  active?: string;
+  onPick: (id: string | null) => void;
+  onClose: () => void;
+}) {
+  const { data, dispatch } = useApp();
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState<RosePineColor>("iris");
+  const { anchorRef, popRef, style } = usePopoverPos(data.tags.length);
 
   const create = () => {
     const name = newName.trim();
     if (!name) return;
-    const tag: Tag = { id: uid(), name, color: "iris" };
+    const tag: Tag = { id: uid(), name, color: newColor };
     dispatch({ type: "tag/add", tag });
-    onToggle(tag.id, true);
+    onPick(tag.id);
     setNewName("");
   };
 
   const popover = (
-    <div
-      ref={popRef}
-      className="tag-picker glass"
-      style={pos ? { top: pos.top, right: pos.right } : { visibility: "hidden" }}
-    >
+    <div ref={popRef} className="tag-picker glass" style={style}>
       {data.tags.length === 0 && <p className="tag-picker-empty">No tags yet.</p>}
       {data.tags.map((t) => {
-        const on = value.includes(t.id);
+        const on = t.id === active;
         return (
           <button
             key={t.id}
             className={`tag-chip ${t.color} ${on ? "on" : ""}`}
-            onClick={() => onToggle(t.id, !on)}
+            onClick={() => onPick(on ? null : t.id)}
           >
             {on ? IC.check : null} {t.name}
           </button>
         );
       })}
+      <ColorPicker value={newColor} onChange={setNewColor} />
       <div className="tag-picker-new">
         <input
           className="input"
@@ -93,25 +100,6 @@ export function TagPicker({
       <span ref={anchorRef} style={{ display: "none" }} />
       {createPortal(popover, document.body)}
     </>
-  );
-}
-
-/** Inline colored mini chips for an item's tags. */
-export function TagChips({ tagIds }: { tagIds?: string[] }) {
-  const { data } = useApp();
-  if (!tagIds?.length) return null;
-  const tags = tagIds
-    .map((id) => data.tags.find((t) => t.id === id))
-    .filter((t): t is Tag => !!t);
-  if (tags.length === 0) return null;
-  return (
-    <span className="tag-chips">
-      {tags.map((t) => (
-        <span key={t.id} className={`tag-chip mini ${t.color}`}>
-          {t.name}
-        </span>
-      ))}
-    </span>
   );
 }
 

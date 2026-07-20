@@ -7,7 +7,7 @@ import { useFocusActions } from "../lib/focus";
 import { saveNoteToVault, openNoteInObsidian, overwriteNoteFile } from "../lib/obsidian";
 import { IC } from "../lib/icons";
 import { ObsidianPanel } from "./ObsidianPanel";
-import { TagChips, TagFilterRow, TagPicker } from "./TagPicker";
+import { TagFilterRow, TagPicker } from "./TagPicker";
 import "./NotesView.css";
 
 export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -21,7 +21,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedNotesIds, setSelectedNotesIds] = useState<Set<string>>(new Set());
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
-  const [bulkApplied, setBulkApplied] = useState<string[]>([]);
+  const [bulkTag, setBulkTag] = useState<string | null>(null);
 
   const toggleSelectedNote = (id: string) =>
     setSelectedNotesIds((prev) => {
@@ -31,7 +31,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
       return next;
     });
   const notes = data.notes.filter(
-    (n) => tagFilter === null || (n.tagIds?.includes(tagFilter) ?? false),
+    (n) => tagFilter === null || n.tagId === tagFilter,
   );
   const autosaveTimers = useRef(new Map<string, number>());
 
@@ -110,7 +110,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 setSelectMode((v) => !v);
                 setSelectedNotesIds(new Set());
                 setBulkPickerOpen(false);
-                setBulkApplied([]);
+                setBulkTag(null);
               }}
             >
               {IC.check}
@@ -129,7 +129,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   setSelectedNotesIds(new Set());
                   setSelectedId(null);
                   setBulkPickerOpen(false);
-                  setBulkApplied([]);
+                  setBulkTag(null);
                 }}
               >
                 Delete
@@ -144,17 +144,16 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 </button>
                 {bulkPickerOpen && (
                   <TagPicker
-                    value={bulkApplied}
-                    onToggle={(id, on) => {
-                      if (on) {
-                        dispatch({ type: "note/tag-many", ids: [...selectedNotesIds], tagId: id });
-                        setBulkApplied((prev) => [...prev, id]);
-                      }
+                    active={bulkTag ?? undefined}
+                    onPick={(id) => {
+                      if (!id) return;
+                      dispatch({ type: "note/tag-many", ids: [...selectedNotesIds], tagId: id });
+                      setBulkTag(id);
                     }}
                     onClose={() => {
                       setBulkPickerOpen(false);
                       setSelectedNotesIds(new Set());
-                      setBulkApplied([]);
+                      setBulkTag(null);
                     }}
                   />
                 )}
@@ -167,10 +166,14 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 {data.notes.length === 0 ? "No notes yet." : "No notes match this tag."}
               </p>
             )}
-            {notes.map((n) => (
+            {notes.map((n) => {
+              const tag = n.tagId ? data.tags.find((t) => t.id === n.tagId) : undefined;
+              return (
               <div
                 key={n.id}
-                className={`notes-list-item ${n.id === selectedId ? "active" : ""}`}
+                className={`notes-list-item ${n.id === selectedId ? "active" : ""} ${tag ? "tagged" : ""}`}
+                style={tag ? ({ "--tag-color": `var(--rp-${tag.color})` } as React.CSSProperties) : undefined}
+                title={tag ? `tag: ${tag.name}` : undefined}
               >
                 {selectMode && (
                   <button
@@ -193,7 +196,6 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   <span className="note-item-preview">
                     {n.body.replace(/[#*`>\-\n]/g, " ").trim().slice(0, 42) || "empty"}
                   </span>
-                  <TagChips tagIds={n.tagIds} />
                 </button>
                 <button
                   className={`btn ghost icon note-item-focus ${
@@ -205,7 +207,8 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   {IC.target}
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </aside>
@@ -264,16 +267,12 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   </button>
                   {tagPickerOpen && (
                     <TagPicker
-                      value={selected.tagIds ?? []}
-                      onToggle={(id, on) =>
+                      active={selected.tagId}
+                      onPick={(id) =>
                         dispatch({
                           type: "note/patch",
                           id: selected.id,
-                          patch: {
-                            tagIds: on
-                              ? [...(selected.tagIds ?? []), id]
-                              : (selected.tagIds ?? []).filter((i) => i !== id),
-                          },
+                          patch: { tagId: id ?? undefined },
                         })
                       }
                       onClose={() => setTagPickerOpen(false)}
