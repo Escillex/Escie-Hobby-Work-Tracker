@@ -121,18 +121,6 @@ export function TasksView() {
           <span className="tasks-day-count">
             {dayTodosShown.length} task{dayTodosShown.length === 1 ? "" : "s"}
           </span>
-          <button
-            className={`btn ${selectMode ? "primary" : "ghost"}`}
-            title="Manage tasks & tags"
-            onClick={() => {
-              setSelectMode((v) => !v);
-              setSelectedIds(new Set());
-              setBulkPickerOpen(false);
-              setBulkTag(null);
-            }}
-          >
-            {IC.check} Manage
-          </button>
         </div>
 
         <div className="tasks-add">
@@ -227,7 +215,17 @@ export function TasksView() {
           </div>
         </div>
 
-        <TagFilterRow active={tagFilter} onChange={setTagFilter} manage={selectMode} />
+        <TagFilterRow
+          active={tagFilter}
+          onChange={setTagFilter}
+          manage={selectMode}
+          onToggleManage={() => {
+            setSelectMode((v) => !v);
+            setSelectedIds(new Set());
+            setBulkPickerOpen(false);
+            setBulkTag(null);
+          }}
+        />
 
         {selectMode && (
           <div className="bulk-bar">

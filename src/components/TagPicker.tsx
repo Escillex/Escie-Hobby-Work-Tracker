@@ -166,10 +166,13 @@ export function TagFilterRow({
   active,
   onChange,
   manage = false,
+  onToggleManage,
 }: {
   active: string | null;
   onChange: (id: string | null) => void;
   manage?: boolean;
+  /** When set, renders the Manage toggle at the row start (visible even collapsed). */
+  onToggleManage?: () => void;
 }) {
   const { data, dispatch } = useApp();
   const [editing, setEditing] = useState<string | null>(null);
@@ -196,10 +199,27 @@ export function TagFilterRow({
     </button>
   );
 
-  if (collapsed) return <div className="tag-filter-row">{toggle}</div>;
+  const manageBtn = onToggleManage && (
+    <button
+      className={`tag-chip tag-manage-btn ${manage ? "on" : ""}`}
+      title="Manage items & tags"
+      onClick={onToggleManage}
+    >
+      {IC.check} Manage
+    </button>
+  );
+
+  if (collapsed)
+    return (
+      <div className="tag-filter-row">
+        {manageBtn}
+        {toggle}
+      </div>
+    );
 
   return (
     <div className="tag-filter-row">
+      {manageBtn}
       {toggle}
       {manage ? (
         <span className="tag-picker-wrap">
