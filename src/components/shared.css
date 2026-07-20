@@ -116,6 +116,11 @@
   border-radius: 50%;
   display: inline-block;
 }
+.tag-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
 .tag-picker-wrap { position: relative; }
 .tag-picker {
   /* Portaled to <body>; top/right set inline from the anchor button. */

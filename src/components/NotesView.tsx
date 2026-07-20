@@ -105,7 +105,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
             <button
               className={`btn icon ${selectMode ? "primary" : "ghost"}`}
-              title="Select multiple"
+              title="Manage notes & tags"
               onClick={() => {
                 setSelectMode((v) => !v);
                 setSelectedNotesIds(new Set());
@@ -116,7 +116,7 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
               {IC.check}
             </button>
           </div>
-          <TagFilterRow active={tagFilter} onChange={setTagFilter} />
+          <TagFilterRow active={tagFilter} onChange={setTagFilter} manage={selectMode} />
           {selectMode && (
             <div className="bulk-bar">
               <span>{selectedNotesIds.size} selected</span>

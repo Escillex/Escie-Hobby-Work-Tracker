@@ -123,7 +123,7 @@ export function TasksView() {
           </span>
           <button
             className={`btn ${selectMode ? "primary" : "ghost"}`}
-            title="Select multiple"
+            title="Manage tasks & tags"
             onClick={() => {
               setSelectMode((v) => !v);
               setSelectedIds(new Set());
@@ -131,7 +131,7 @@ export function TasksView() {
               setBulkTag(null);
             }}
           >
-            {IC.check} Select
+            {IC.check} Manage
           </button>
         </div>
 
@@ -227,7 +227,7 @@ export function TasksView() {
           </div>
         </div>
 
-        <TagFilterRow active={tagFilter} onChange={setTagFilter} />
+        <TagFilterRow active={tagFilter} onChange={setTagFilter} manage={selectMode} />
 
         {selectMode && (
           <div className="bulk-bar">

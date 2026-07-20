@@ -103,9 +103,65 @@ export function TagPicker({
   );
 }
 
+/** Rename / recolor / delete popover for one tag, anchored like TagPicker.
+ *  Delete untags items but never deletes them. */
+function TagEditor({ tag, onClose }: { tag: Tag; onClose: () => void }) {
+  const { dispatch } = useApp();
+  const [name, setName] = useState(tag.name);
+  const [color, setColor] = useState<RosePineColor>(tag.color);
+  const { anchorRef, popRef, style } = usePopoverPos();
+
+  const save = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    dispatch({ type: "tag/update", tag: { ...tag, name: trimmed, color } });
+    onClose();
+  };
+
+  const popover = (
+    <div ref={popRef} className="tag-picker glass" style={style}>
+      <input
+        className="input"
+        value={name}
+        autoFocus
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") onClose();
+        }}
+      />
+      <ColorPicker value={color} onChange={setColor} />
+      <div className="tag-editor-actions">
+        <button
+          className="btn ghost danger"
+          onClick={() => {
+            dispatch({ type: "tag/delete", id: tag.id });
+            onClose();
+          }}
+        >
+          Delete
+        </button>
+        <button className="btn primary" disabled={!name.trim()} onClick={save}>
+          Save
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <span ref={anchorRef} style={{ display: "none" }} />
+      {createPortal(popover, document.body)}
+    </>
+  );
+}
+
 /** "all" + one chip per tag; null = no filter. Collapsible via a persisted
- *  setting shared by the tasks and notes views; manage mode forces it open.
- *  With no tags yet, shows a hint so the feature stays discoverable. */
+ *  setting shared by the tasks and notes views; manage mode forces it open,
+ *  swaps "all" for a create (+) chip, and makes chips click-to-edit.
+ *  Double-clicking a chip outside manage mode opens the same editor without
+ *  disturbing the active filter. With no tags yet, shows a hint so the
+ *  feature stays discoverable. */
 export function TagFilterRow({
   active,
   onChange,
@@ -116,6 +172,9 @@ export function TagFilterRow({
   manage?: boolean;
 }) {
   const { data, dispatch } = useApp();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const preClick = useRef<string | null>(null);
   const collapsed = (data.settings.tagRowCollapsed ?? false) && !manage;
   const activeTag = active ? data.tags.find((t) => t.id === active) : undefined;
 
@@ -142,12 +201,24 @@ export function TagFilterRow({
   return (
     <div className="tag-filter-row">
       {toggle}
-      {data.tags.length === 0 && (
+      {manage ? (
+        <span className="tag-picker-wrap">
+          <button className="tag-chip" title="New tag" onClick={() => setCreating((v) => !v)}>
+            {IC.plus}
+          </button>
+          {creating && (
+            <TagPicker
+              active={undefined}
+              onPick={() => setCreating(false)}
+              onClose={() => setCreating(false)}
+            />
+          )}
+        </span>
+      ) : data.tags.length === 0 ? (
         <span className="tag-filter-hint">
           No tags yet — use {IC.tag} to create one, then filter here.
         </span>
-      )}
-      {data.tags.length > 0 && (
+      ) : (
         <button
           className={`tag-chip ${active === null ? "on" : ""}`}
           onClick={() => onChange(null)}
@@ -156,13 +227,27 @@ export function TagFilterRow({
         </button>
       )}
       {data.tags.map((t) => (
-        <button
-          key={t.id}
-          className={`tag-chip ${t.color} ${active === t.id ? "on" : ""}`}
-          onClick={() => onChange(active === t.id ? null : t.id)}
-        >
-          {t.name}
-        </button>
+        <span key={t.id} className="tag-picker-wrap">
+          <button
+            className={`tag-chip ${t.color} ${active === t.id ? "on" : ""}`}
+            onClick={(e) => {
+              if (manage) {
+                setEditing(editing === t.id ? null : t.id);
+                return;
+              }
+              if (e.detail === 1) preClick.current = active;
+              onChange(active === t.id ? null : t.id);
+            }}
+            onDoubleClick={() => {
+              if (manage) return;
+              onChange(preClick.current); // restore the filter from before the first click
+              setEditing(t.id);
+            }}
+          >
+            {t.name}
+          </button>
+          {editing === t.id && <TagEditor tag={t} onClose={() => setEditing(null)} />}
+        </span>
       ))}
     </div>
   );
