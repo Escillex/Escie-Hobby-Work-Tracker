@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Tag } from "../lib/types";
 import { uid } from "../lib/types";
 import { useApp } from "../lib/state";
 import { IC } from "../lib/icons";
 import "./shared.css";
 
-/** Popover for toggling tag membership; parent needs .tag-picker-wrap. */
+/** Popover for toggling tag membership; parent needs .tag-picker-wrap.
+ *  Portaled to <body> with fixed positioning — inside a scroll container
+ *  (task/note lists have overflow-y: auto) an absolute popover gets
+ *  clipped at the panel edge. */
 export function TagPicker({
   value,
   onToggle,
@@ -17,6 +21,24 @@ export function TagPicker({
 }) {
   const { data, dispatch } = useApp();
   const [newName, setNewName] = useState("");
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  // Anchor below the .tag-picker-wrap button; flip above if the popover
+  // would run past the bottom of the window. Re-runs as tags are created
+  // since that changes the popover's height.
+  useLayoutEffect(() => {
+    const wrap = anchorRef.current?.parentElement;
+    const pop = popRef.current;
+    if (!wrap || !pop) return;
+    const r = wrap.getBoundingClientRect();
+    let top = r.bottom + 4;
+    if (top + pop.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, r.top - pop.offsetHeight - 4);
+    }
+    setPos({ top, right: Math.max(8, window.innerWidth - r.right) });
+  }, [data.tags.length]);
 
   const create = () => {
     const name = newName.trim();
@@ -27,8 +49,12 @@ export function TagPicker({
     setNewName("");
   };
 
-  return (
-    <div className="tag-picker glass">
+  const popover = (
+    <div
+      ref={popRef}
+      className="tag-picker glass"
+      style={pos ? { top: pos.top, right: pos.right } : { visibility: "hidden" }}
+    >
       {data.tags.length === 0 && <p className="tag-picker-empty">No tags yet.</p>}
       {data.tags.map((t) => {
         const on = value.includes(t.id);
@@ -61,6 +87,13 @@ export function TagPicker({
       </button>
     </div>
   );
+
+  return (
+    <>
+      <span ref={anchorRef} style={{ display: "none" }} />
+      {createPortal(popover, document.body)}
+    </>
+  );
 }
 
 /** Inline colored mini chips for an item's tags. */
@@ -82,7 +115,8 @@ export function TagChips({ tagIds }: { tagIds?: string[] }) {
   );
 }
 
-/** "all" + one chip per tag; null = no filter. Hidden when no tags exist. */
+/** "all" + one chip per tag; null = no filter. With no tags yet, shows a
+ *  hint instead of disappearing so the feature stays discoverable. */
 export function TagFilterRow({
   active,
   onChange,
@@ -91,7 +125,14 @@ export function TagFilterRow({
   onChange: (id: string | null) => void;
 }) {
   const { data } = useApp();
-  if (data.tags.length === 0) return null;
+  if (data.tags.length === 0)
+    return (
+      <div className="tag-filter-row">
+        <span className="tag-filter-hint">
+          No tags yet — use {IC.tag} to create one, then filter here.
+        </span>
+      </div>
+    );
   return (
     <div className="tag-filter-row">
       <button

@@ -117,11 +117,12 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           </div>
           <TagFilterRow active={tagFilter} onChange={setTagFilter} />
-          {selectMode && selectedNotesIds.size > 0 && (
+          {selectMode && (
             <div className="bulk-bar">
               <span>{selectedNotesIds.size} selected</span>
               <button
                 className="btn ghost danger"
+                disabled={selectedNotesIds.size === 0}
                 onClick={() => {
                   if (!confirm(`Delete ${selectedNotesIds.size} selected notes? Vault files stay in Obsidian.`)) return;
                   dispatch({ type: "note/delete-many", ids: [...selectedNotesIds] });
@@ -134,7 +135,11 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 Delete
               </button>
               <div className="tag-picker-wrap">
-                <button className="btn ghost" onClick={() => setBulkPickerOpen((v) => !v)}>
+                <button
+                  className="btn ghost"
+                  disabled={selectedNotesIds.size === 0}
+                  onClick={() => setBulkPickerOpen((v) => !v)}
+                >
                   {IC.tag} Tag
                 </button>
                 {bulkPickerOpen && (

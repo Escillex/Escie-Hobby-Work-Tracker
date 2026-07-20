@@ -105,11 +105,14 @@
   gap: 0.35rem;
   margin: 0.4rem 0;
 }
+.tag-filter-hint {
+  font-size: 0.75rem;
+  color: var(--rp-muted);
+}
 .tag-picker-wrap { position: relative; }
 .tag-picker {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  /* Portaled to <body>; top/right set inline from the anchor button. */
+  position: fixed;
   z-index: 30;
   display: flex;
   flex-direction: column;

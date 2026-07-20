@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { IC } from "../lib/icons";
 import "./shared.css";
 
@@ -9,7 +10,9 @@ interface Props {
 }
 
 export function Modal({ title, onClose, children }: Props) {
-  return (
+  // Portal to <body>: an ancestor with backdrop-filter (.glass) would
+  // otherwise become the containing block for the fixed backdrop.
+  return createPortal(
     <div
       className="modal-backdrop"
       onMouseDown={(e) => {
@@ -25,6 +28,7 @@ export function Modal({ title, onClose, children }: Props) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

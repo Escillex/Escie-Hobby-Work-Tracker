@@ -231,11 +231,12 @@ export function TasksView() {
 
         <TagFilterRow active={tagFilter} onChange={setTagFilter} />
 
-        {selectMode && selectedIds.size > 0 && (
+        {selectMode && (
           <div className="bulk-bar">
             <span>{selectedIds.size} selected</span>
             <button
               className="btn ghost danger"
+              disabled={selectedIds.size === 0}
               onClick={() => {
                 if (!confirm(`Delete ${selectedIds.size} selected tasks?`)) return;
                 dispatch({ type: "todo/delete-many", ids: [...selectedIds] });
@@ -247,7 +248,11 @@ export function TasksView() {
               Delete
             </button>
             <div className="tag-picker-wrap">
-              <button className="btn ghost" onClick={() => setBulkPickerOpen((v) => !v)}>
+              <button
+                className="btn ghost"
+                disabled={selectedIds.size === 0}
+                onClick={() => setBulkPickerOpen((v) => !v)}
+              >
                 {IC.tag} Tag
               </button>
               {bulkPickerOpen && (

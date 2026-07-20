@@ -98,6 +98,17 @@ h1, h2, h3, h4 {
   transform: translateY(0);
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--glass-border);
+}
+
 .btn.primary {
   background: color-mix(in srgb, var(--rp-iris) 22%, var(--rp-overlay));
   border-color: color-mix(in srgb, var(--rp-iris) 45%, transparent);
