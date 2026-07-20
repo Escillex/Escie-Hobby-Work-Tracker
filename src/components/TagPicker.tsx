@@ -103,32 +103,58 @@ export function TagPicker({
   );
 }
 
-/** "all" + one chip per tag; null = no filter. With no tags yet, shows a
- *  hint instead of disappearing so the feature stays discoverable. */
+/** "all" + one chip per tag; null = no filter. Collapsible via a persisted
+ *  setting shared by the tasks and notes views; manage mode forces it open.
+ *  With no tags yet, shows a hint so the feature stays discoverable. */
 export function TagFilterRow({
   active,
   onChange,
+  manage = false,
 }: {
   active: string | null;
   onChange: (id: string | null) => void;
+  manage?: boolean;
 }) {
-  const { data } = useApp();
-  if (data.tags.length === 0)
-    return (
-      <div className="tag-filter-row">
+  const { data, dispatch } = useApp();
+  const collapsed = (data.settings.tagRowCollapsed ?? false) && !manage;
+  const activeTag = active ? data.tags.find((t) => t.id === active) : undefined;
+
+  const toggle = (
+    <button
+      className="tag-chip tag-row-toggle"
+      title={collapsed ? "Show tag filter" : "Hide tag filter"}
+      onClick={() =>
+        dispatch({
+          type: "settings/update",
+          settings: { tagRowCollapsed: !(data.settings.tagRowCollapsed ?? false) },
+        })
+      }
+    >
+      {IC.tag}
+      {collapsed && activeTag && (
+        <i className="tag-dot" style={{ background: `var(--rp-${activeTag.color})` }} />
+      )}
+    </button>
+  );
+
+  if (collapsed) return <div className="tag-filter-row">{toggle}</div>;
+
+  return (
+    <div className="tag-filter-row">
+      {toggle}
+      {data.tags.length === 0 && (
         <span className="tag-filter-hint">
           No tags yet — use {IC.tag} to create one, then filter here.
         </span>
-      </div>
-    );
-  return (
-    <div className="tag-filter-row">
-      <button
-        className={`tag-chip ${active === null ? "on" : ""}`}
-        onClick={() => onChange(null)}
-      >
-        all
-      </button>
+      )}
+      {data.tags.length > 0 && (
+        <button
+          className={`tag-chip ${active === null ? "on" : ""}`}
+          onClick={() => onChange(null)}
+        >
+          all
+        </button>
+      )}
       {data.tags.map((t) => (
         <button
           key={t.id}
