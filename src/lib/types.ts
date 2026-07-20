@@ -109,7 +109,7 @@ export interface Note {
   updatedAt: string; // ISO
   vaultFile?: string; // vault path this note was last written to
   vaultTitle?: string; // title the vault file was last written under
-  tagIds?: string[]; // Tag ids; absent = untagged
+  tagId?: string; // Tag id; absent = untagged
 }
 
 export type Recurrence = "none" | "daily" | "weekly";
@@ -126,7 +126,7 @@ export interface Todo {
   notifiedEarlyFor?: string; // occurrence ISO the early warning fired for
   notifiedDueFor?: string; // occurrence ISO the due notification fired for
   done: boolean;
-  tagIds?: string[]; // Tag ids; absent = untagged
+  tagId?: string; // Tag id; absent = untagged
 }
 
 export interface Stats {
@@ -149,6 +149,7 @@ export interface Settings {
   vaultNotesFolder?: string;
   fontFamily?: string;
   earlyWarningMinutes?: number; // minutes of heads-up before any due time (default 10)
+  tagRowCollapsed?: boolean; // tag filter row collapsed (shared by tasks/notes views)
 }
 
 export interface AppData {
