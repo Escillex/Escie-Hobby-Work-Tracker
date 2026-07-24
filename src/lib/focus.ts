@@ -1,4 +1,5 @@
 import type { AppData, FocusRef } from "./types";
+import { sameRef } from "./types";
 import { useApp } from "./state";
 
 export interface ResolvedFocus {
@@ -34,12 +35,7 @@ export function resolveFocus(data: AppData, ref: FocusRef): ResolvedFocus | null
   }
 }
 
-export const sameRef = (a?: FocusRef, b?: FocusRef) =>
-  a != null &&
-  b != null &&
-  a.kind === b.kind &&
-  a.id === b.id &&
-  a.parentId === b.parentId;
+export { sameRef };
 
 /** Focus actions shared by every place that can set the current focus. */
 export function useFocusActions() {

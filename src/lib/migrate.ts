@@ -1,4 +1,4 @@
-import type { AppData, Note, Todo } from "./types";
+import type { AppData, FocusRef, Note, Todo } from "./types";
 import { migrateScheduling } from "./schedule";
 
 /** Add anything newer app versions expect that older data files lack. */
@@ -26,7 +26,7 @@ export function migrate(data: AppData): AppData {
     next = { ...next, tags: [] };
   }
   if (!next.focus) {
-    next = { ...next, focus: {} };
+    next = { ...next, focus: { next: [] } };
   }
   // Impulses merged into notes — each impulse becomes a titled note.
   const legacy = (next as { impulses?: { id: string; text: string; createdAt: string }[] })
@@ -100,6 +100,14 @@ export function migrate(data: AppData): AppData {
       ...next,
       todos: next.todos.map(collapse),
       notes: next.notes.map(collapse),
+    };
+  }
+  // The single `next` focus slot became an ordered queue.
+  const legacyNext = (next.focus as { next?: FocusRef | FocusRef[] }).next;
+  if (!Array.isArray(legacyNext)) {
+    next = {
+      ...next,
+      focus: { ...next.focus, next: legacyNext ? [legacyNext] : [] },
     };
   }
   return next;

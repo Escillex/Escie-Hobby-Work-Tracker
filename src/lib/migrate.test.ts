@@ -40,3 +40,29 @@ describe("migrate tags v2", () => {
     expect(migrate(data).todos[0].tagId).toBe("a");
   });
 });
+
+describe("migrate focus queue", () => {
+  it("wraps a single next ref into an array", () => {
+    const data = {
+      ...defaultData(),
+      focus: { now: { kind: "todo", id: "a" }, next: { kind: "note", id: "b" } },
+    } as unknown as AppData;
+    const out = migrate(data);
+    expect(out.focus.next).toEqual([{ kind: "note", id: "b" }]);
+    expect(out.focus.now).toEqual({ kind: "todo", id: "a" });
+  });
+
+  it("gives an absent next an empty array", () => {
+    const data = {
+      ...defaultData(),
+      focus: { now: { kind: "todo", id: "a" } },
+    } as unknown as AppData;
+    expect(migrate(data).focus.next).toEqual([]);
+  });
+
+  it("leaves an existing queue alone", () => {
+    const queue = [{ kind: "note" as const, id: "b" }];
+    const data = { ...defaultData(), focus: { next: queue } } as AppData;
+    expect(migrate(data).focus.next).toEqual(queue);
+  });
+});

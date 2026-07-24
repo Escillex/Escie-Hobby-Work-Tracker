@@ -162,7 +162,7 @@ export interface AppData {
   notes: Note[];
   tags: Tag[];
   vaultArchived?: string[]; // vault files released by app-side renames; never re-imported, never deleted
-  focus: { now?: FocusRef; next?: FocusRef };
+  focus: { now?: FocusRef; next: FocusRef[] };
   stats: Stats;
   settings: Settings;
 }
@@ -195,8 +195,16 @@ export function defaultData(): AppData {
     todos: [],
     notes: [],
     tags: [],
-    focus: {},
+    focus: { next: [] },
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },
   };
 }
+
+/** Two focus pointers reference the same item. */
+export const sameRef = (a?: FocusRef, b?: FocusRef): boolean =>
+  a != null &&
+  b != null &&
+  a.kind === b.kind &&
+  a.id === b.id &&
+  a.parentId === b.parentId;
