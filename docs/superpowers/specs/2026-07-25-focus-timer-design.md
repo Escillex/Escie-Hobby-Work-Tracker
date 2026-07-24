@@ -1,6 +1,9 @@
-# Focus timer — time spent per item
+# Focus timer and queue
 
 Date: 2026-07-25
+
+Two related changes to the focus system: a timer that measures time spent per item, and
+a real queue behind it. They share a spec because both restructure `AppData.focus`.
 
 ## Problem
 
@@ -12,13 +15,73 @@ The gap is sharpest for games. Steam games arrive from `GetOwnedGames` with
 `playtime_forever` stored as `progress` (hours), so a game row renders `42 h`.
 Non-Steam games have no such source and sit at `0 h` forever.
 
+Separately, the Next slot is not a queue. `focusNext()` exists in `src/lib/focus.ts`
+but no component calls it, so nothing can be put there deliberately. Next fills only as
+a side effect: focusing a second item demotes the first into it. It is a one-slot
+history of what you were previously on, labelled as a queue.
+
 ## Goal
 
 Focusing an item starts a timer. Each item accumulates a lifetime total across every
 focus session, so you can see how much time you have spent on it. Non-Steam games get
 a real playtime number.
 
-## Data model
+The Next slot becomes a queue you can actually add to.
+
+## Focus queue
+
+### Shape
+
+```ts
+focus: { now?: FocusRef; next: FocusRef[] }   // was: next?: FocusRef
+```
+
+`migrate()` wraps an existing single `next` into an array, or sets `[]` when absent.
+
+### Reducer actions
+
+`focus/set` is replaced, since a slot-plus-ref action no longer expresses a list:
+
+```ts
+| { type: "focus/now"; ref?: FocusRef }   // set or clear Now
+| { type: "focus/queue"; ref: FocusRef }  // append to the queue
+| { type: "focus/unqueue"; ref: FocusRef }
+| { type: "focus/advance" }               // Now = next[0], next = next.slice(1)
+```
+
+`focus/queue` is a no-op when the ref is already queued or is already Now, compared
+with `sameRef`. The queue is uncapped.
+
+### Behaviour change: no more silent demotion
+
+Today, focusing B while A is Now pushes A into Next. That must stop. Once the queue is
+something you curate deliberately, having it injected with every item you happen to
+focus makes it useless. Focusing a new item replaces Now and drops the old one; if you
+want to keep it, queue it.
+
+### Queue control
+
+Every place that renders the `IC.target` focus button gains an `IC.next` button beside
+it that dispatches `focus/queue`: `TasksWidget`, `NotesWidget`, `NotesView`,
+`TasksView`, `MediaTracker` (media rows and checklist items), and `MediaModals`
+checklist items.
+
+The button is always rendered rather than revealed on hover, per the preference for
+affordances that do not hide. It shows a disabled state when the item is already Now or
+already queued, so the no-op is visible rather than mysterious.
+
+### Next card
+
+Lists the queue in order instead of showing one item. Each row gets a remove control
+(`focus/unqueue`) and clicking a row promotes it to Now (`focus/now` plus
+`focus/unqueue`). Empty state keeps the existing "Queue is clear." text.
+
+`finishNow` in `NowNextCard` completes the current item then dispatches
+`focus/advance`.
+
+`useFocusActions.isFocused` returns true when the ref is Now or anywhere in the queue.
+
+## Time ledger
 
 One new field on `AppData`:
 
@@ -136,8 +199,17 @@ via `media/replaceCategory`, so anything stored there would be silently wiped.
 - `purgeOrphans` — drops keys for deleted items, keeps live ones including checklist
   items reached through their parent.
 
-`migrate.test.ts` gains a case asserting `time` is added to an older data file and that
-an existing ledger is left alone.
+`reducer.test.ts` gains queue cases:
+
+- `focus/queue` appends, and is a no-op for a ref already queued or already Now.
+- `focus/unqueue` removes only the matching ref.
+- `focus/advance` promotes `next[0]` and shortens the queue; on an empty queue it
+  clears Now.
+- `focus/now` replaces Now without touching the queue — the demotion is gone.
+
+`migrate.test.ts` gains cases asserting `time` is added to an older data file, that an
+existing ledger is left alone, and that a single `next` ref is wrapped into an array
+while an absent one becomes `[]`.
 
 ## Out of scope
 
@@ -145,4 +217,5 @@ an existing ledger is left alone.
   would grow `data.json` without being asked for.
 - Idle detection and auto-stop, explicitly declined.
 - Writing focus time back to Steam or AniList.
-- Time on the `next` focus slot — only `now` accumulates.
+- Time on queued items — only `now` accumulates.
+- Reordering the queue by drag. Remove and re-queue is enough for now.
