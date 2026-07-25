@@ -356,7 +356,7 @@ function TaskRow({
 }) {
   const { data, dispatch } = useApp();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const overdue = isOverdue(todo, new Date());
   const tag = todo.tagId ? data.tags.find((t) => t.id === todo.tagId) : undefined;
 
@@ -409,6 +409,20 @@ function TaskRow({
         onClick={() => focusNow({ kind: "todo", id: todo.id })}
       >
         {IC.target}
+      </button>
+      <button
+        className="btn ghost icon task-focus"
+        title={
+          isNow({ kind: "todo", id: todo.id })
+            ? "Already focused"
+            : isQueued({ kind: "todo", id: todo.id })
+              ? "Already queued"
+              : "Do this next"
+        }
+        disabled={isNow({ kind: "todo", id: todo.id }) || isQueued({ kind: "todo", id: todo.id })}
+        onClick={() => queue({ kind: "todo", id: todo.id })}
+      >
+        {IC.next}
       </button>
       <button className="btn ghost icon danger" title="Delete" onClick={onDelete}>
         {IC.close}

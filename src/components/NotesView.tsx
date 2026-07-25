@@ -12,7 +12,7 @@ import "./NotesView.css";
 
 export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { data, dispatch } = useApp();
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const [selectedId, setSelectedId] = useState<string | null>(data.notes[0]?.id ?? null);
   const [preview, setPreview] = useState(false);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
@@ -203,6 +203,20 @@ export function NotesView({ onOpenSettings }: { onOpenSettings: () => void }) {
                   onClick={() => focusNow({ kind: "note", id: n.id })}
                 >
                   {IC.target}
+                </button>
+                <button
+                  className="btn ghost icon note-item-focus"
+                  title={
+                    isNow({ kind: "note", id: n.id })
+                      ? "Already focused"
+                      : isQueued({ kind: "note", id: n.id })
+                        ? "Already queued"
+                        : "Do this next"
+                  }
+                  disabled={isNow({ kind: "note", id: n.id }) || isQueued({ kind: "note", id: n.id })}
+                  onClick={() => queue({ kind: "note", id: n.id })}
+                >
+                  {IC.next}
                 </button>
               </div>
               );

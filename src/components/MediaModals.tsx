@@ -25,7 +25,7 @@ export function EntryDetailModal({
   onUpdate: (e: MediaEntry) => void;
   onRate: (score: number | undefined) => void;
 }) {
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const [newItem, setNewItem] = useState("");
   const [newRecurrence, setNewRecurrence] = useState<Recurrence>("none");
   const checklist = entry.checklist ?? [];
@@ -171,6 +171,23 @@ export function EntryDetailModal({
                 onClick={() => focusNow({ kind: "task", id: c.id, parentId: entry.id })}
               >
                 {IC.target}
+              </button>
+              <button
+                className="btn ghost icon"
+                title={
+                  isNow({ kind: "task", id: c.id, parentId: entry.id })
+                    ? "Already focused"
+                    : isQueued({ kind: "task", id: c.id, parentId: entry.id })
+                      ? "Already queued"
+                      : "Do this next"
+                }
+                disabled={
+                  isNow({ kind: "task", id: c.id, parentId: entry.id }) ||
+                  isQueued({ kind: "task", id: c.id, parentId: entry.id })
+                }
+                onClick={() => queue({ kind: "task", id: c.id, parentId: entry.id })}
+              >
+                {IC.next}
               </button>
               <button
                 className="btn ghost icon danger"

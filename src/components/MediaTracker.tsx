@@ -631,7 +631,7 @@ function MediaCard({
   selected?: boolean;
   onToggleSelected?: () => void;
 }) {
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const open = entry.checklist?.filter((c) => !c.done) ?? [];
   const openTasks = open.length;
   const hasNotes = Boolean(entry.notes?.trim());
@@ -720,6 +720,20 @@ function MediaCard({
           >
             {IC.target}
           </button>
+          <button
+            className="btn ghost icon"
+            title={
+              isNow({ kind: "media", id: entry.id })
+                ? "Already focused"
+                : isQueued({ kind: "media", id: entry.id })
+                  ? "Already queued"
+                  : "Do this next"
+            }
+            disabled={isNow({ kind: "media", id: entry.id }) || isQueued({ kind: "media", id: entry.id })}
+            onClick={() => queue({ kind: "media", id: entry.id })}
+          >
+            {IC.next}
+          </button>
           <button className="btn ghost icon danger" title="Remove" onClick={onDelete}>
             {IC.close}
           </button>
@@ -751,6 +765,23 @@ function MediaCard({
                 onClick={() => focusNow({ kind: "task", id: c.id, parentId: entry.id })}
               >
                 {IC.target}
+              </button>
+              <button
+                className="btn ghost icon media-task-focus"
+                title={
+                  isNow({ kind: "task", id: c.id, parentId: entry.id })
+                    ? "Already focused"
+                    : isQueued({ kind: "task", id: c.id, parentId: entry.id })
+                      ? "Already queued"
+                      : "Do this next"
+                }
+                disabled={
+                  isNow({ kind: "task", id: c.id, parentId: entry.id }) ||
+                  isQueued({ kind: "task", id: c.id, parentId: entry.id })
+                }
+                onClick={() => queue({ kind: "task", id: c.id, parentId: entry.id })}
+              >
+                {IC.next}
               </button>
             </div>
           ))}

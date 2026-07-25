@@ -12,7 +12,7 @@ const dueDay = (iso: string) => localDate(new Date(iso));
 
 export function TasksWidget({ onOpen }: { onOpen: () => void }) {
   const { data, dispatch } = useApp();
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const today = localDate();
   const [selected, setSelected] = useState(today);
 
@@ -84,6 +84,20 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
               >
                 {IC.target}
               </button>
+              <button
+                className="btn ghost icon tw-focus"
+                title={
+                  isNow({ kind: "todo", id: t.id })
+                    ? "Already focused"
+                    : isQueued({ kind: "todo", id: t.id })
+                      ? "Already queued"
+                      : "Do this next"
+                }
+                disabled={isNow({ kind: "todo", id: t.id }) || isQueued({ kind: "todo", id: t.id })}
+                onClick={() => queue({ kind: "todo", id: t.id })}
+              >
+                {IC.next}
+              </button>
               <span className="tw-time">
                 {new Date(t.dueAt!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
@@ -112,6 +126,20 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
                 onClick={() => focusNow({ kind: "todo", id: t.id })}
               >
                 {IC.target}
+              </button>
+              <button
+                className="btn ghost icon tw-focus"
+                title={
+                  isNow({ kind: "todo", id: t.id })
+                    ? "Already focused"
+                    : isQueued({ kind: "todo", id: t.id })
+                      ? "Already queued"
+                      : "Do this next"
+                }
+                disabled={isNow({ kind: "todo", id: t.id }) || isQueued({ kind: "todo", id: t.id })}
+                onClick={() => queue({ kind: "todo", id: t.id })}
+              >
+                {IC.next}
               </button>
               <span className="tw-time">{t.scheduleTime}</span>
             </div>

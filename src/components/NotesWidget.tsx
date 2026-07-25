@@ -11,7 +11,7 @@ import "./NotesWidget.css";
  *  Managing (editing bodies) happens in the Notes tab. */
 export function NotesWidget({ onOpen }: { onOpen: () => void }) {
   const { data, dispatch } = useApp();
-  const { focusNow, isFocused } = useFocusActions();
+  const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const [text, setText] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -79,6 +79,20 @@ export function NotesWidget({ onOpen }: { onOpen: () => void }) {
                 onClick={() => focusNow({ kind: "note", id: n.id })}
               >
                 {IC.target}
+              </button>
+              <button
+                className="btn ghost icon"
+                title={
+                  isNow({ kind: "note", id: n.id })
+                    ? "Already focused"
+                    : isQueued({ kind: "note", id: n.id })
+                      ? "Already queued"
+                      : "Do this next"
+                }
+                disabled={isNow({ kind: "note", id: n.id }) || isQueued({ kind: "note", id: n.id })}
+                onClick={() => queue({ kind: "note", id: n.id })}
+              >
+                {IC.next}
               </button>
               <button
                 className="btn ghost icon danger"
