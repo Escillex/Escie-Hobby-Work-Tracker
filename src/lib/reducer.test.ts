@@ -241,3 +241,27 @@ describe("focus queue", () => {
     expect(s.focus.next).toEqual([b]);
   });
 });
+
+describe("time ledger", () => {
+  it("bank adds to an existing total", () => {
+    let s = reducer(defaultData(), { type: "time/bank", key: "todo::a", seconds: 30 });
+    s = reducer(s, { type: "time/bank", key: "todo::a", seconds: 45 });
+    expect(s.time["todo::a"]).toBe(75);
+  });
+
+  it("bank starts from zero for an unseen key", () => {
+    const s = reducer(defaultData(), { type: "time/bank", key: "note::n", seconds: 10 });
+    expect(s.time["note::n"]).toBe(10);
+  });
+
+  it("set overwrites rather than adding", () => {
+    let s = reducer(defaultData(), { type: "time/bank", key: "todo::a", seconds: 900 });
+    s = reducer(s, { type: "time/set", key: "todo::a", seconds: 60 });
+    expect(s.time["todo::a"]).toBe(60);
+  });
+
+  it("set clamps negatives to zero", () => {
+    const s = reducer(defaultData(), { type: "time/set", key: "todo::a", seconds: -5 });
+    expect(s.time["todo::a"]).toBe(0);
+  });
+});

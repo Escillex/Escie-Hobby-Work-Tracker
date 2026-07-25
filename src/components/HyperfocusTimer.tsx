@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useApp } from "../lib/state";
+import { resolveFocus } from "../lib/focus";
+import { refKey, formatDuration, parseDuration } from "../lib/time";
 import { notify } from "../lib/notify";
 import { IC } from "../lib/icons";
 import "./HyperfocusTimer.css";
@@ -8,18 +11,62 @@ const NUDGES: [number, string][] = [
   [120, "2 hours deep. Genuinely impressive. Stand up, drink water, come back."],
 ];
 
+/** How often accrued time is written into the ledger. A crash costs at most this. */
+const BANK_EVERY_MS = 30_000;
+
 export function HyperfocusTimer() {
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const { data, dispatch } = useApp();
+  const nowRef = data.focus.now;
+  const focused = nowRef ? resolveFocus(data, nowRef) : null;
+  const key = nowRef ? refKey(nowRef) : null;
+
+  const [manualStart, setManualStart] = useState<number | null>(null);
+  const [paused, setPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [alarmMin, setAlarmMin] = useState("");
   const [alarmEnd, setAlarmEnd] = useState<number | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const notified = useRef<Set<number>>(new Set());
 
+  /** Start of the stretch not yet written to the ledger. */
+  const anchor = useRef<number>(Date.now());
+  const sessionStart = useRef<number | null>(null);
+  const bankedKey = useRef<string | null>(null);
+
+  const total = key ? (data.time[key] ?? 0) : 0;
+
+  const bank = useCallback(
+    (target: string | null) => {
+      if (!target) return;
+      const secs = Math.floor((Date.now() - anchor.current) / 1000);
+      anchor.current = Date.now();
+      if (secs > 0) dispatch({ type: "time/bank", key: target, seconds: secs });
+    },
+    [dispatch],
+  );
+
+  // A new focus banks the old one and restarts the session clock at zero.
   useEffect(() => {
-    if (startedAt == null && alarmEnd == null) return;
+    if (bankedKey.current === key) return;
+    bank(bankedKey.current);
+    bankedKey.current = key;
+    anchor.current = Date.now();
+    sessionStart.current = key ? Date.now() : null;
+    setElapsed(0);
+    setPaused(false);
+    notified.current.clear();
+  }, [key, bank]);
+
+  // Bank whatever is pending when the panel goes away.
+  useEffect(() => () => bank(bankedKey.current), [bank]);
+
+  useEffect(() => {
+    const running = (key != null && !paused) || manualStart != null;
+    if (!running && alarmEnd == null) return;
     const tick = window.setInterval(() => {
-      if (startedAt != null) {
-        const secs = Math.floor((Date.now() - startedAt) / 1000);
+      const start = key != null && !paused ? sessionStart.current : manualStart;
+      if (start != null) {
+        const secs = Math.floor((Date.now() - start) / 1000);
         setElapsed(secs);
         const mins = Math.floor(secs / 60);
         for (const [at, msg] of NUDGES) {
@@ -28,6 +75,9 @@ export function HyperfocusTimer() {
             notify("Hyperfocus check-in", msg);
           }
         }
+        if (key != null && !paused && Date.now() - anchor.current >= BANK_EVERY_MS) {
+          bank(key);
+        }
       }
       if (alarmEnd != null && Date.now() >= alarmEnd) {
         setAlarmEnd(null);
@@ -35,13 +85,29 @@ export function HyperfocusTimer() {
       }
     }, 1000);
     return () => window.clearInterval(tick);
-  }, [startedAt, alarmEnd]);
+  }, [key, paused, manualStart, alarmEnd, bank]);
 
-  const minutes = Math.floor(elapsed / 60);
-  const nudge =
-    startedAt != null
-      ? [...NUDGES].reverse().find(([m]) => minutes >= m)?.[1]
-      : undefined;
+  const togglePause = () => {
+    if (!key) return;
+    if (paused) {
+      sessionStart.current = Date.now() - elapsed * 1000;
+      anchor.current = Date.now();
+      setPaused(false);
+    } else {
+      bank(key);
+      setPaused(true);
+    }
+  };
+
+  const commitEdit = () => {
+    if (editing == null || !key) return setEditing(null);
+    const secs = parseDuration(editing);
+    if (secs != null) {
+      bank(key);
+      dispatch({ type: "time/set", key, seconds: secs });
+    }
+    setEditing(null);
+  };
 
   const fmt = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -52,24 +118,61 @@ export function HyperfocusTimer() {
       : `${m}:${String(sec).padStart(2, "0")}`;
   };
 
+  const minutes = Math.floor(elapsed / 60);
+  const running = (key != null && !paused) || manualStart != null;
+  const nudge = running
+    ? [...NUDGES].reverse().find(([m]) => minutes >= m)?.[1]
+    : undefined;
+
   return (
     <div className="hf-timer glass">
       <div className="panel-title">{IC.clock} Hyperfocus</div>
-      <div className={`hf-display ${startedAt != null ? "running" : ""}`}>{fmt(elapsed)}</div>
+      {focused && <p className="hf-subject">{focused.label}</p>}
+      <div className={`hf-display ${running ? "running" : ""}`}>{fmt(elapsed)}</div>
+      {key && (
+        <div className="hf-total">
+          {editing != null ? (
+            <input
+              className="input hf-total-input"
+              autoFocus
+              value={editing}
+              placeholder="2h 30m"
+              onChange={(e) => setEditing(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitEdit();
+                if (e.key === "Escape") setEditing(null);
+              }}
+            />
+          ) : (
+            <button
+              className="hf-total-btn"
+              title="Click to correct the total"
+              onClick={() => setEditing(formatDuration(total))}
+            >
+              {formatDuration(total)} total
+            </button>
+          )}
+        </div>
+      )}
       <div className="hf-actions">
-        {startedAt == null ? (
+        {key ? (
+          <button className="btn" onClick={togglePause}>
+            {paused ? IC.play : IC.stop} {paused ? "Resume" : "Pause"}
+          </button>
+        ) : manualStart == null ? (
           <button
             className="btn primary"
             onClick={() => {
               setElapsed(0);
               notified.current.clear();
-              setStartedAt(Date.now());
+              setManualStart(Date.now());
             }}
           >
             {IC.play} Start session
           </button>
         ) : (
-          <button className="btn" onClick={() => setStartedAt(null)}>
+          <button className="btn" onClick={() => setManualStart(null)}>
             {IC.stop} End ({fmt(elapsed)})
           </button>
         )}

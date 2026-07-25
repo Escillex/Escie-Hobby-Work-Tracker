@@ -49,3 +49,42 @@
   background: color-mix(in srgb, var(--rp-foam) 10%, transparent);
   animation: fade-up 0.3s var(--ease);
 }
+
+.hf-subject {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--rp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hf-total {
+  display: flex;
+  justify-content: center;
+  margin-top: -0.35rem;
+}
+
+.hf-total-btn {
+  border: none;
+  background: transparent;
+  color: var(--rp-subtle);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.hf-total-btn:hover {
+  background: var(--glass-overlay);
+  color: var(--rp-text);
+}
+
+.hf-total-input {
+  width: 7rem;
+  text-align: center;
+  font-size: 0.82rem;
+}

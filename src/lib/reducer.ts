@@ -44,6 +44,8 @@ export type Action =
   | { type: "focus/queue"; ref: FocusRef }
   | { type: "focus/unqueue"; ref: FocusRef }
   | { type: "focus/advance" }
+  | { type: "time/bank"; key: string; seconds: number }
+  | { type: "time/set"; key: string; seconds: number }
   | { type: "settings/update"; settings: Partial<Settings> };
 
 /** Append the vault paths of dead linked notes so reconcile never
@@ -274,6 +276,19 @@ export function reducer(state: AppData, action: Action): AppData {
       return {
         ...state,
         focus: { now: state.focus.next[0], next: state.focus.next.slice(1) },
+      };
+    case "time/bank":
+      return {
+        ...state,
+        time: {
+          ...state.time,
+          [action.key]: (state.time[action.key] ?? 0) + action.seconds,
+        },
+      };
+    case "time/set":
+      return {
+        ...state,
+        time: { ...state.time, [action.key]: Math.max(0, Math.round(action.seconds)) },
       };
     case "settings/update":
       return { ...state, settings: { ...state.settings, ...action.settings } };
