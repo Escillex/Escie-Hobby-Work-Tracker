@@ -9,6 +9,8 @@ import {
   canCustomizeStatuses,
 } from "../lib/media";
 import { useFocusActions } from "../lib/focus";
+import { useApp } from "../lib/state";
+import { refKey, formatDuration, parseDuration } from "../lib/time";
 import { setSeasonWatched } from "../lib/tmdb";
 import { IC } from "../lib/icons";
 import { Modal } from "./Modal";
@@ -29,6 +31,16 @@ export function EntryDetailModal({
   const [newItem, setNewItem] = useState("");
   const [newRecurrence, setNewRecurrence] = useState<Recurrence>("none");
   const checklist = entry.checklist ?? [];
+  const { data, dispatch } = useApp();
+  const timeKey = refKey({ kind: "media", id: entry.id });
+  const [timeEdit, setTimeEdit] = useState<string | null>(null);
+
+  const commitTime = () => {
+    if (timeEdit == null) return;
+    const secs = parseDuration(timeEdit);
+    if (secs != null) dispatch({ type: "time/set", key: timeKey, seconds: secs });
+    setTimeEdit(null);
+  };
 
   const addItem = () => {
     const text = newItem.trim();
@@ -67,6 +79,31 @@ export function EntryDetailModal({
       <div className="field">
         <label>Your rating</label>
         <StarRating value={entry.score} onChange={onRate} />
+      </div>
+      <div className="field">
+        <label>Time spent</label>
+        {timeEdit != null ? (
+          <input
+            className="input"
+            autoFocus
+            value={timeEdit}
+            placeholder="2h 30m"
+            onChange={(e) => setTimeEdit(e.target.value)}
+            onBlur={commitTime}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitTime();
+              if (e.key === "Escape") setTimeEdit(null);
+            }}
+          />
+        ) : (
+          <button
+            className="btn ghost"
+            title="Click to correct the total"
+            onClick={() => setTimeEdit(formatDuration(data.time[timeKey] ?? 0))}
+          >
+            {formatDuration(data.time[timeKey] ?? 0)}
+          </button>
+        )}
       </div>
       {entry.seasons?.length ? (
         <div className="field">

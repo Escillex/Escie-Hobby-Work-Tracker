@@ -1,6 +1,7 @@
 import { useApp } from "../lib/state";
 import { resolveFocus } from "../lib/focus";
 import type { FocusRef } from "../lib/types";
+import { refKey, formatDuration } from "../lib/time";
 import { IC } from "../lib/icons";
 import "./NowNextCard.css";
 
@@ -10,6 +11,7 @@ export function NowNextCard() {
   const nowRef = data.focus.now;
   const queue = data.focus.next;
   const now = nowRef ? resolveFocus(data, nowRef) : null;
+  const nowTotal = nowRef ? (data.time[refKey(nowRef)] ?? 0) : 0;
 
   // Complete the underlying item (for todos/tasks), then pull the queue head up.
   const finishNow = () => {
@@ -61,6 +63,7 @@ export function NowNextCard() {
           <>
             <p className="now-text">{now.label}</p>
             {now.sublabel && <p className="now-sub">{now.sublabel}</p>}
+            <p className="now-time">{formatDuration(nowTotal)} spent</p>
             <div className="now-actions">
               <button className="btn primary" onClick={finishNow}>
                 {IC.check} {now.completable ? "Done" : "Clear"}

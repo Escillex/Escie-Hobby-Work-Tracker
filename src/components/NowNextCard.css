@@ -110,3 +110,10 @@
   text-align: left;
   color: var(--rp-foam);
 }
+
+.now-time {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--rp-gold);
+  font-variant-numeric: tabular-nums;
+}

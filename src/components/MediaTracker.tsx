@@ -12,6 +12,7 @@ import {
 } from "../lib/media";
 import { useApp } from "../lib/state";
 import { useFocusActions } from "../lib/focus";
+import { gameHours } from "../lib/time";
 import { searchMedia, saveEntry, fetchList, type AniListMedia } from "../lib/anilist";
 import {
   steamStoreSearch,
@@ -632,6 +633,7 @@ function MediaCard({
   onToggleSelected?: () => void;
 }) {
   const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
+  const { data } = useApp();
   const open = entry.checklist?.filter((c) => !c.done) ?? [];
   const openTasks = open.length;
   const hasNotes = Boolean(entry.notes?.trim());
@@ -665,8 +667,8 @@ function MediaCard({
         </span>
         <div className="media-progress">
           {!movie && (
-            <span>
-              {entry.progress}
+            <span title={hoursMode && entry.steamAppId == null ? "Hours focused in this app" : undefined}>
+              {hoursMode ? gameHours(entry, data.time) : entry.progress}
               {entry.total != null ? ` / ${entry.total}` : hoursMode ? " h" : ""}
             </span>
           )}
