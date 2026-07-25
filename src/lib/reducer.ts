@@ -9,7 +9,7 @@ import type {
   Settings,
   Tag,
 } from "./types";
-import { localDate } from "./types";
+import { localDate, sameRef } from "./types";
 
 export type Action =
   | { type: "hydrate"; data: AppData }
@@ -40,7 +40,10 @@ export type Action =
   | { type: "tag/purge"; id: string }
   | { type: "todo/tag-many"; ids: string[]; tagId: string }
   | { type: "note/tag-many"; ids: string[]; tagId: string }
-  | { type: "focus/set"; slot: "now" | "next"; ref?: FocusRef }
+  | { type: "focus/now"; ref?: FocusRef }
+  | { type: "focus/queue"; ref: FocusRef }
+  | { type: "focus/unqueue"; ref: FocusRef }
+  | { type: "focus/advance" }
   | { type: "settings/update"; settings: Partial<Settings> };
 
 /** Append the vault paths of dead linked notes so reconcile never
@@ -250,8 +253,28 @@ export function reducer(state: AppData, action: Action): AppData {
         ),
       };
     }
-    case "focus/set":
-      return { ...state, focus: { ...state.focus, [action.slot]: action.ref } };
+    case "focus/now":
+      return { ...state, focus: { ...state.focus, now: action.ref } };
+    case "focus/queue": {
+      const { now, next } = state.focus;
+      if (sameRef(now, action.ref) || next.some((r) => sameRef(r, action.ref))) {
+        return state;
+      }
+      return { ...state, focus: { ...state.focus, next: [...next, action.ref] } };
+    }
+    case "focus/unqueue":
+      return {
+        ...state,
+        focus: {
+          ...state.focus,
+          next: state.focus.next.filter((r) => !sameRef(r, action.ref)),
+        },
+      };
+    case "focus/advance":
+      return {
+        ...state,
+        focus: { now: state.focus.next[0], next: state.focus.next.slice(1) },
+      };
     case "settings/update":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     default:

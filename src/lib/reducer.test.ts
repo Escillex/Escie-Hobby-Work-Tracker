@@ -181,3 +181,63 @@ describe("bulk actions", () => {
     expect(next2.notes[0].tagId).toBe("tg1");
   });
 });
+
+describe("focus queue", () => {
+  const a = { kind: "todo" as const, id: "a" };
+  const b = { kind: "note" as const, id: "b" };
+  const c = { kind: "task" as const, id: "c", parentId: "m1" };
+
+  it("queue appends in order", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: a });
+    s = reducer(s, { type: "focus/queue", ref: b });
+    expect(s.focus.next).toEqual([a, b]);
+  });
+
+  it("queue ignores a ref already queued", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: a });
+    s = reducer(s, { type: "focus/queue", ref: { ...a } });
+    expect(s.focus.next).toEqual([a]);
+  });
+
+  it("queue ignores the ref already focused", () => {
+    const base = reducer(defaultData(), { type: "focus/now", ref: a });
+    const s = reducer(base, { type: "focus/queue", ref: a });
+    expect(s.focus.next).toEqual([]);
+  });
+
+  it("queue distinguishes checklist items by parent", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: c });
+    s = reducer(s, { type: "focus/queue", ref: { ...c, parentId: "m2" } });
+    expect(s.focus.next).toHaveLength(2);
+  });
+
+  it("unqueue removes only the matching ref", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: a });
+    s = reducer(s, { type: "focus/queue", ref: b });
+    s = reducer(s, { type: "focus/unqueue", ref: a });
+    expect(s.focus.next).toEqual([b]);
+  });
+
+  it("advance promotes the head and shortens the queue", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: a });
+    s = reducer(s, { type: "focus/queue", ref: b });
+    s = reducer(s, { type: "focus/advance" });
+    expect(s.focus.now).toEqual(a);
+    expect(s.focus.next).toEqual([b]);
+  });
+
+  it("advance on an empty queue clears now", () => {
+    const base = reducer(defaultData(), { type: "focus/now", ref: a });
+    const s = reducer(base, { type: "focus/advance" });
+    expect(s.focus.now).toBeUndefined();
+    expect(s.focus.next).toEqual([]);
+  });
+
+  it("focus/now replaces now without touching the queue", () => {
+    let s = reducer(defaultData(), { type: "focus/queue", ref: b });
+    s = reducer(s, { type: "focus/now", ref: a });
+    s = reducer(s, { type: "focus/now", ref: c });
+    expect(s.focus.now).toEqual(c);
+    expect(s.focus.next).toEqual([b]);
+  });
+});
