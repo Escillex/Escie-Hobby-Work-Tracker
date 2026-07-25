@@ -3,6 +3,7 @@ import type { AppData } from "./types";
 import { defaultData, localDate } from "./types";
 import type { ContributionData } from "./github";
 import { migrate } from "./migrate";
+import { purgeOrphans } from "./time";
 
 let store: Store | null = null;
 
@@ -69,7 +70,8 @@ function resetRecurring(data: AppData): AppData {
 export async function loadData(): Promise<AppData> {
   const s = await getStore();
   const existing = await s.get<AppData>("data");
-  const data = resetRecurring(rollStreak(migrate(existing ?? defaultData())));
+  const migrated = resetRecurring(rollStreak(migrate(existing ?? defaultData())));
+  const data = { ...migrated, time: purgeOrphans(migrated) };
   await s.set("data", data);
   return data;
 }

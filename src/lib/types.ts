@@ -163,6 +163,7 @@ export interface AppData {
   tags: Tag[];
   vaultArchived?: string[]; // vault files released by app-side renames; never re-imported, never deleted
   focus: { now?: FocusRef; next: FocusRef[] };
+  time: Record<string, number>; // seconds focused, keyed by refKey()
   stats: Stats;
   settings: Settings;
 }
@@ -196,6 +197,7 @@ export function defaultData(): AppData {
     notes: [],
     tags: [],
     focus: { next: [] },
+    time: {},
     stats: { lastOpenedDate: localDate(), streak: 1 },
     settings: { githubUser: "" },
   };

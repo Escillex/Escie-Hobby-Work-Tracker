@@ -66,3 +66,16 @@ describe("migrate focus queue", () => {
     expect(migrate(data).focus.next).toEqual(queue);
   });
 });
+
+describe("migrate time ledger", () => {
+  it("adds an empty ledger to an older file", () => {
+    const data = { ...defaultData() } as Partial<AppData>;
+    delete data.time;
+    expect(migrate(data as AppData).time).toEqual({});
+  });
+
+  it("leaves an existing ledger alone", () => {
+    const data = { ...defaultData(), time: { "todo::a": 60 } } as AppData;
+    expect(migrate(data).time).toEqual({ "todo::a": 60 });
+  });
+});

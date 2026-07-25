@@ -28,6 +28,9 @@ export function migrate(data: AppData): AppData {
   if (!next.focus) {
     next = { ...next, focus: { next: [] } };
   }
+  if (!next.time) {
+    next = { ...next, time: {} };
+  }
   // Impulses merged into notes — each impulse becomes a titled note.
   const legacy = (next as { impulses?: { id: string; text: string; createdAt: string }[] })
     .impulses;
