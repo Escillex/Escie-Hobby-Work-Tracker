@@ -41,22 +41,21 @@ export { sameRef };
 export function useFocusActions() {
   const { data, dispatch } = useApp();
 
-  const focus = data.focus ?? {};
+  const focus = data.focus;
 
-  /** Make `ref` the NOW focus; any existing NOW slides down to NEXT. */
+  /** Make `ref` the NOW focus. Any previous NOW is simply dropped — the queue
+   *  is curated deliberately, so nothing is demoted into it automatically. */
   const focusNow = (ref: FocusRef) => {
     if (sameRef(focus.now, ref)) return;
-    if (focus.now && !sameRef(focus.now, ref)) {
-      dispatch({ type: "focus/set", slot: "next", ref: focus.now });
-    }
-    dispatch({ type: "focus/set", slot: "now", ref });
+    dispatch({ type: "focus/now", ref });
+    dispatch({ type: "focus/unqueue", ref });
   };
 
-  const focusNext = (ref: FocusRef) =>
-    dispatch({ type: "focus/set", slot: "next", ref });
+  const queue = (ref: FocusRef) => dispatch({ type: "focus/queue", ref });
 
-  const isFocused = (ref: FocusRef) =>
-    sameRef(focus.now, ref) || sameRef(focus.next, ref);
+  const isNow = (ref: FocusRef) => sameRef(focus.now, ref);
+  const isQueued = (ref: FocusRef) => focus.next.some((r) => sameRef(r, ref));
+  const isFocused = (ref: FocusRef) => isNow(ref) || isQueued(ref);
 
-  return { focusNow, focusNext, isFocused };
+  return { focusNow, queue, isNow, isQueued, isFocused };
 }

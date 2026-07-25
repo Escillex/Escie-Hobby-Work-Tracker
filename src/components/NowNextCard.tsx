@@ -7,16 +7,14 @@ import "./NowNextCard.css";
 export function NowNextCard() {
   const { data, dispatch } = useApp();
 
-  const nowRef = data.focus?.now;
-  const nextRef = data.focus?.next;
+  const nowRef = data.focus.now;
+  const queue = data.focus.next;
   const now = nowRef ? resolveFocus(data, nowRef) : null;
-  const next = nextRef ? resolveFocus(data, nextRef) : null;
 
-  // Complete the underlying item (for todos/tasks), then pull NEXT into NOW.
+  // Complete the underlying item (for todos/tasks), then pull the queue head up.
   const finishNow = () => {
     if (nowRef && now?.completable) completeItem(nowRef);
-    dispatch({ type: "focus/set", slot: "now", ref: nextRef });
-    dispatch({ type: "focus/set", slot: "next", ref: undefined });
+    dispatch({ type: "focus/advance" });
   };
 
   const completeItem = (ref: FocusRef) => {
@@ -48,9 +46,9 @@ export function NowNextCard() {
     }
   };
 
-  const clearNow = () => {
-    dispatch({ type: "focus/set", slot: "now", ref: nextRef });
-    dispatch({ type: "focus/set", slot: "next", ref: undefined });
+  const promote = (ref: FocusRef) => {
+    dispatch({ type: "focus/now", ref });
+    dispatch({ type: "focus/unqueue", ref });
   };
 
   return (
@@ -66,10 +64,10 @@ export function NowNextCard() {
             <div className="now-actions">
               <button className="btn primary" onClick={finishNow}>
                 {IC.check} {now.completable ? "Done" : "Clear"}
-                {next ? " → pull next" : ""}
+                {queue.length > 0 ? " → pull next" : ""}
               </button>
               {now.completable && (
-                <button className="btn ghost" onClick={clearNow}>
+                <button className="btn ghost" onClick={() => dispatch({ type: "focus/advance" })}>
                   Clear
                 </button>
               )}
@@ -84,13 +82,36 @@ export function NowNextCard() {
       </div>
       <div className="next-card glass">
         <div className="panel-title">Next</div>
-        {next ? (
-          <>
-            <p className="next-text">{next.label}</p>
-            {next.sublabel && <p className="now-sub">{next.sublabel}</p>}
-          </>
+        {queue.length > 0 ? (
+          <ul className="next-list">
+            {queue.map((ref, i) => {
+              const item = resolveFocus(data, ref);
+              if (!item) return null;
+              return (
+                <li className="next-item" key={`${ref.kind}:${ref.parentId ?? ""}:${ref.id}`}>
+                  <button
+                    className="next-item-label"
+                    title="Focus on this now"
+                    onClick={() => promote(ref)}
+                  >
+                    <span className="next-item-pos">{i + 1}</span>
+                    {item.label}
+                  </button>
+                  <button
+                    className="btn ghost icon danger"
+                    title="Remove from queue"
+                    onClick={() => dispatch({ type: "focus/unqueue", ref })}
+                  >
+                    {IC.close}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         ) : (
-          <p className="now-empty">Queue is clear.</p>
+          <p className="now-empty">
+            Queue is clear. Add with the {IC.next} button on any item.
+          </p>
         )}
       </div>
     </section>

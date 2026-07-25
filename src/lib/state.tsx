@@ -28,7 +28,7 @@ const EMPTY: AppData = {
   todos: [],
   notes: [],
   tags: [],
-  focus: {},
+  focus: { next: [] },
   stats: { lastOpenedDate: localDate(), streak: 0 },
   settings: { githubUser: "" },
 };
