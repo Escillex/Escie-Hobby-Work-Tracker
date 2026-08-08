@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Todo } from "../lib/types";
 import { localDate } from "../lib/types";
 import { useApp } from "../lib/state";
-import { isOverdue } from "../lib/schedule";
+import { isOverdue, recurringOnDay } from "../lib/schedule";
 import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
 import "./TasksWidget.css";
@@ -41,14 +41,8 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
     .filter((t) => dueDay(t.dueAt!) === selected)
     .filter(matchesTab)
     .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
-  const selectedDow = new Date(`${selected}T00:00`).getDay();
   const recurringForDay = data.todos
-    .filter(
-      (t) =>
-        t.recurrence !== "none" &&
-        t.scheduleTime != null &&
-        (t.recurrence === "daily" || t.scheduleDay === selectedDow),
-    )
+    .filter((t) => recurringOnDay(t, selected))
     .filter(matchesTab);
 
   // Tabs: All + Untagged are always present; the rest come from defined tags.
@@ -208,7 +202,7 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
               >
                 {IC.next}
               </button>
-              <span className="tw-time">{t.scheduleTime}</span>
+              <span className="tw-time">{t.scheduleTime ?? t.recurrence}</span>
             </div>
           );
         })}

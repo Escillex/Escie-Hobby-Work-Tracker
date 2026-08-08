@@ -7,6 +7,7 @@ import {
   dueTarget,
   isOverdue,
   migrateScheduling,
+  recurringOnDay,
 } from "./schedule";
 
 const base: Todo = {
@@ -179,5 +180,35 @@ describe("migrateScheduling", () => {
       todos: [{ ...clean, notifiedDueFor: "2026-07-18T06:00:00.000Z" }],
     };
     expect(migrateScheduling(data)).toBe(data);
+  });
+});
+
+describe("recurringOnDay", () => {
+  // Wed 2026-07-15 (getDay() === 3), Sun 2026-07-19 (getDay() === 0)
+  const wed = "2026-07-15";
+  const sun = "2026-07-19";
+
+  it("never matches one-off todos", () => {
+    expect(recurringOnDay({ ...base, recurrence: "none" }, wed)).toBe(false);
+  });
+
+  it("shows daily todos on every day, with or without a reminder time", () => {
+    const timed = { ...base, recurrence: "daily" as const, scheduleTime: "08:00" };
+    const bare = { ...base, recurrence: "daily" as const };
+    expect(recurringOnDay(timed, wed)).toBe(true);
+    expect(recurringOnDay(bare, wed)).toBe(true);
+    expect(recurringOnDay(bare, sun)).toBe(true);
+  });
+
+  it("shows a weekly todo only on its scheduleDay", () => {
+    const weekly = { ...base, recurrence: "weekly" as const, scheduleDay: 3 };
+    expect(recurringOnDay(weekly, wed)).toBe(true);
+    expect(recurringOnDay(weekly, sun)).toBe(false);
+  });
+
+  it("shows a weekly todo with no weekday on every day", () => {
+    const weekly = { ...base, recurrence: "weekly" as const };
+    expect(recurringOnDay(weekly, wed)).toBe(true);
+    expect(recurringOnDay(weekly, sun)).toBe(true);
   });
 });

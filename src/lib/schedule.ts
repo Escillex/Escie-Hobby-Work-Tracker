@@ -58,6 +58,18 @@ export function isOverdue(todo: Todo, now: Date): boolean {
   return now.getTime() >= target.getTime() && !doneForOccurrence(todo, target);
 }
 
+/** Whether a recurring todo should surface on the given local day
+ *  (YYYY-MM-DD key). Daily recurs every day; weekly recurs on its
+ *  scheduleDay, or every day when no weekday was chosen (so a reminder-less
+ *  weekly todo isn't lost). One-off todos never match here — they surface
+ *  via dueAt. A missing reminder time is fine: it is not required to show. */
+export function recurringOnDay(todo: Todo, dayKey: string): boolean {
+  if (todo.recurrence === "none") return false;
+  if (todo.recurrence === "daily") return true;
+  if (todo.scheduleDay == null) return true;
+  return new Date(`${dayKey}T00:00`).getDay() === todo.scheduleDay;
+}
+
 /** One-time data upgrade: per-todo earlyMinutes becomes the global
  *  settings.earlyWarningMinutes, and the notified booleans become
  *  occurrence-keyed fields (key = the dueAt instant for one-offs). */
