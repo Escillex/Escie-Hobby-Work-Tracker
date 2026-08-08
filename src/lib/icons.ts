@@ -15,6 +15,8 @@ export const IC = {
   bolt: "",
   random: "",
   clock: "",
+  chevronLeft: "",
+  chevronRight: "",
   tag: "",
   bulb: "",
   github: "",

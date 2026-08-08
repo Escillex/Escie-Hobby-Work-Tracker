@@ -1,42 +1,65 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Todo } from "../lib/types";
 import { localDate } from "../lib/types";
 import { useApp } from "../lib/state";
 import { isOverdue } from "../lib/schedule";
 import { useFocusActions } from "../lib/focus";
 import { IC } from "../lib/icons";
-import { Calendar, type DotKind } from "./Calendar";
 import "./TasksWidget.css";
 
 const dueDay = (iso: string) => localDate(new Date(iso));
+
+// Shift a YYYY-MM-DD key by whole days, staying in local time.
+const shiftDay = (key: string, delta: number): string => {
+  const d = new Date(`${key}T00:00`);
+  d.setDate(d.getDate() + delta);
+  return localDate(d);
+};
+
+// "all" shows everything, "untagged" shows tagless todos, otherwise a tag id.
+type TabId = "all" | "untagged" | string;
 
 export function TasksWidget({ onOpen }: { onOpen: () => void }) {
   const { data, dispatch } = useApp();
   const { focusNow, queue, isFocused, isNow, isQueued } = useFocusActions();
   const today = localDate();
   const [selected, setSelected] = useState(today);
+  const [tab, setTab] = useState<TabId>("all");
+
+  // Live clock — tick once a minute so the header time stays current.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const matchesTab = (t: Todo) =>
+    tab === "all" ? true : tab === "untagged" ? t.tagId == null : t.tagId === tab;
 
   const dated = data.todos.filter((t) => t.recurrence === "none" && t.dueAt);
   const dayTodos = dated
     .filter((t) => dueDay(t.dueAt!) === selected)
+    .filter(matchesTab)
     .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
   const selectedDow = new Date(`${selected}T00:00`).getDay();
-  const recurringForDay = data.todos.filter(
-    (t) =>
-      t.recurrence !== "none" &&
-      t.scheduleTime != null &&
-      (t.recurrence === "daily" || t.scheduleDay === selectedDow),
-  );
+  const recurringForDay = data.todos
+    .filter(
+      (t) =>
+        t.recurrence !== "none" &&
+        t.scheduleTime != null &&
+        (t.recurrence === "daily" || t.scheduleDay === selectedDow),
+    )
+    .filter(matchesTab);
 
-  const dots = new Map<string, DotKind>();
-  const rank = { done: 0, pending: 1, overdue: 2 } as const;
-  for (const t of dated) {
-    const key = dueDay(t.dueAt!);
-    const overdue = !t.done && new Date(t.dueAt!).getTime() < Date.now();
-    const kind: DotKind = t.done ? "done" : overdue ? "overdue" : "pending";
-    const cur = dots.get(key);
-    if (!cur || rank[kind] > rank[cur]) dots.set(key, kind);
-  }
+  // Tabs: All + Untagged are always present; the rest come from defined tags.
+  const tabs = useMemo(
+    () => [
+      { id: "all" as TabId, name: "All", color: undefined as string | undefined },
+      { id: "untagged" as TabId, name: "Untagged", color: undefined as string | undefined },
+      ...data.tags.map((t) => ({ id: t.id as TabId, name: t.name, color: t.color })),
+    ],
+    [data.tags],
+  );
 
   const complete = (t: Todo) =>
     dispatch({
@@ -59,11 +82,55 @@ export function TasksWidget({ onOpen }: { onOpen: () => void }) {
           {IC.external}
         </button>
       </div>
-      <Calendar selected={selected} onSelect={setSelected} dots={dots} />
-      <div className="tw-day-label">{selected === today ? "Today" : prettyDay(selected)}</div>
+
+      <div className="tw-datebar">
+        <button
+          className="btn ghost icon"
+          title="Previous day"
+          onClick={() => setSelected((s) => shiftDay(s, -1))}
+        >
+          {IC.chevronLeft}
+        </button>
+        <button
+          className="tw-date-label"
+          title={selected === today ? "Showing today" : "Jump to today"}
+          onClick={() => setSelected(today)}
+        >
+          {selected === today ? "Today" : prettyDay(selected)}
+        </button>
+        <button
+          className="btn ghost icon"
+          title="Next day"
+          onClick={() => setSelected((s) => shiftDay(s, 1))}
+        >
+          {IC.chevronRight}
+        </button>
+        <span className="tw-clock">
+          {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      </div>
+
+      <div className="tw-tabs">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            className={`tw-tab ${tab === t.id ? "active" : ""}`}
+            style={
+              t.color
+                ? ({ "--tab-color": `var(--rp-${t.color})` } as React.CSSProperties)
+                : undefined
+            }
+            onClick={() => setTab(t.id)}
+          >
+            {t.color && <i className="tw-tab-dot" />}
+            {t.name}
+          </button>
+        ))}
+      </div>
+
       <div className="tw-list">
         {dayTodos.length === 0 && recurringForDay.length === 0 && (
-          <p className="tw-empty">Nothing scheduled.</p>
+          <p className="tw-empty">Nothing here.</p>
         )}
         {dayTodos.map((t) => {
           const overdue = !t.done && new Date(t.dueAt!).getTime() < Date.now();
